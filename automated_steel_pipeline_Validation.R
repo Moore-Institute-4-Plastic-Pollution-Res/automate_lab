@@ -20,7 +20,7 @@ drive_auth()
 # Access ID of all files in each folder
 files <- c("spectra", "sample data", "images")
 
-for (file in files)
+for (file in files) {}
 spectra <- shared_drive_find("test_data") |> 
     drive_ls("spectra") |> 
     drive_ls() 

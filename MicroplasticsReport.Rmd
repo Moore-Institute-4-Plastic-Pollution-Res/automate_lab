@@ -1,0 +1,266 @@
+---
+title: "MicroplasticsReport"
+output: word_document
+date: "2024-10-16"
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(data.table)
+library(ggplot2)
+library(knitr)
+library(stringr)
+library(flextable)
+library(officer)
+wd <- "~/Desktop/Villanova/NewData_07_12_2024"
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Report Job Code MIPPR_VNOVA
+## Project Name Villanova  – Water and Soil Samples	
+## Received Date	29 January 2024
+
+
+
+## Methodology
+The Moore Institute for Plastic Pollution Research (MIPPR) uses FTIR for the determination of microplastics greater than 50 µm in size in source water as required by the California State Water Board’s Method for Microplastics Analysis in Drinking Water (State Water Resources Control Board, 2022 and MIPPR, 2024). However, this report includes microplastics greater than 25 µm as the software analysis method developed by MIPPR is able to identify microplastics at the 25 µm based on FTIR pixel size. The method is based on peer-reviewed literature and the results and recommendations from an international microplastic method evaluation study (De Frond et al., 2022). 
+
+## Sample Preparation
+Water samples were prepared by sieving the sample through a stack of sieves; 500 µm, 212 µm and 20 µm. The collected material from each sieve was collected into discrete sample jars containing the derived samples. The 500 µm, 212 µm and 20 µm derived samples were digested in 35% hydrogen peroxide (H2O2) with the exception of the 500 µm and 212 µm derived samples from VNOVA_Blank, MIPPR_LFB, and MIPPR_Procedural Blank. Due to interfering amounts of sediment in the samples, the 20 µm derived samples were density separated in a 1.4 g/ml density solution of calcium chloride (CaCl2). Following digestion and density separation, as indicated, the samples were then filtered onto one or more 25 µm stainless steel filters with 5µm mesh for FTIR analysis.
+Soil samples were transferred into a 1-liter sample jar, 500 ml of RO water and 100 ml 10% MAG Alcojet were added. The samples were stirred with a metal spoon, shaken, then allowed to sit. The samples were wet sieved through a stack of sieves; 500 µm, 212 µm and 20 µm. The collected material from each sieve was rinsed and collected into discrete sample jars containing the derived samples. The 500 µm derived samples were handpicked for microplastics using a stereoscope. The suspected particles were analyzed with FTIR. The 212 µm and 20 µm derived samples were digested in 35% hydrogen peroxide (H2O2) then sieved and density separated in a 1.4 g/ml density solution of calcium chloride (CaCl2). The sample was then filtered onto one or more 25 µm stainless steel filters with 5 µm mesh for FTIR analysis. If the sample contained too much sediment, an aliquot was taken and the volume of aliquot to sample was recorded.
+Please see Notes and Recommendations section for descriptions and definitions of the sample nomenclature.
+
+## Sample Analysis - FTIR
+Fourier transform infrared spectroscopy (FTIR) was used for chemical identification, counting, and sizing of plastic particles in accordance with the above referenced methods. A 16 mm2 area of each filter was mapped and analyzed. 
+All particles in the area were characterized by chemical ID, projected area, and length. A black-and-white mosaic image was created for each polymer type that can be referenced against the spectral heat maps. Particle polymer class information is reported in a summary table (Table 2), and an average spectrum was calculated. The top correlation of spectral match of 66% for each sample was recorded. 
+The FTIR files of the raw spectra (.map), along with the spectral matches (.dat), and the mosaic images (.jpeg) are included in the data package submitted with this report. 
+
+## Compound Microscope Scans, Stereoscope Images, and Photographs
+In addition to FTIR mosaic images, compound microscope scans, stereoscope images and photographs were collected from a portion of the samples to be used for additional information and QA/QC purposes. These images can be found in the submitted data package.
+
+## Data Analysis
+The FTIR spectral results were analyzed using OpenSpecy software, version 1.0. Nonplastic particles found in the sample were not included in the final results. The number of plastic particles in each sample and the percentage of each polymer by count and size class are presented in Table 1. Table 2 presents the types of polymers detected, particle count by polymer type, and percent of total polymers by each polymer type for all samples. Table 3 presents a summary of the average area and average maximum length of particles for each sample. Raw data and the OpenSpecy code can be found in the submitted data package.
+
+## MIPPR Quality Assurance/Quality Control Samples
+With each batch of samples, the MIPPR laboratory prepared a procedural blank and a laboratory fortified blank which was spiked with a known number of particles of particular types of plastic and size classes. The procedural blank provides an indication of the level of contamination that could come from the laboratory procedure. The identification of and percent recovery of particles in the laboratory fortified blank provide information as to the accuracy of the method. The results of the MIPPR QA/QC samples are presented in Tables 5A-C.
+
+## DATA SUMMARY
+Here we summarize the number of particles per sample, the polymer types, and size characteristics. The data set includes a .csv file for particle measurements (particle_details_all) and a file of spectra wavelength measurements for the particle polymers (median_spec_all).
+
+```{r sampleid, echo=FALSE}
+sample_id_results <- fread(paste0(wd, "/particle_details_all.csv")) %>%
+  #mutate(sample_id = gsub("(_lft$)|(_rt$)", "", sample_id)) %>%
+  #filter(max_cor_val >= threshold) %>% #Acceptable accuracy doing it like this too. 
+  #filter(!grepl("_PB_", sample_id)) %>%
+  filter(!grepl("TRUE", bad_spectra)) %>%
+  filter(!grepl("unknown", material_class)) %>%
+  filter(!grepl("other material", material_class)) %>%
+  filter(!grepl("mineral", material_class)) %>%
+  filter(!grepl("organic matter", material_class)) %>%
+  group_by(sample_name) %>%
+  summarise(count = n())
+
+polymer_results <- fread(paste0(wd, "/particle_details_all.csv")) %>%
+  # mutate(sample_id = gsub("(_lft$)|(_rt$)", "", sample_id)) %>%
+  # mutate(new_id = str_extract(sample_id, "[_^]+$"))
+  #filter(max_cor_val >= threshold) %>% #Acceptable accuracy doing it like this too.
+  filter(!grepl("_LFB_", sample_id)) %>%
+  #filter(!grepl("_PB_", sample_id)) %>%
+  filter(!grepl("TRUE", bad_spectra)) %>%
+  filter(!grepl("unknown", material_class)) %>%
+  filter(!grepl("other material", material_class)) %>%
+  filter(!grepl("mineral", material_class)) %>%
+  filter(!grepl("organic matter", material_class)) %>%
+  group_by(material_class) %>%
+  summarise(count = n()) %>%
+  mutate( percent = round(100*(count / sum(count)),2))%>%
+          arrange(desc(percent))
+
+average_results <- fread(paste0(wd, "/particle_details_all.csv")) %>%
+  filter(!grepl("TRUE", bad_spectra)) %>%
+  filter(!grepl("unknown", material_class)) %>%
+  filter(!grepl("other material", material_class)) %>%
+  filter(!grepl("mineral", material_class)) %>%
+  filter(!grepl("organic matter", material_class)) %>%
+  group_by(sample_name) %>%
+  summarise(avgarea = mean(area_um2), avemaxlen = mean(max_length_um), count = n())
+```
+
+The plastic particle counts for all samples are summarized below in Table 1. The particle counts in the samples ranged from `r min(sample_id_results[,2], na.rm=T)` to `r max(sample_id_results[,2], na.rm=T)` particles. Table 2 presents the types of polymers detected, particle count by polymer type, and percent of total polymers by each polymer type for all samples. Twenty polymer types were detected, the most common were polyolefins (polyalkenes) at 54.62 percent of the total number of polymers detected and polystyrenes (polyphenylethylenes, -methylstyrene) which accounted for 20.21 percent of the total number of polymers detected. Table 3 presents a summary of the average area and average maximum length of particles for each sample. The average area of the particles detected by FTIR ranged from `r ceiling(min(average_results[,2], na.rm=T))` to `r ceiling(max(average_results[,2], na.rm=T))`µm2 the average maximum length of the particles in the samples ranged from `r ceiling(min(average_results[,3], na.rm=T))`µm to `r ceiling(max(average_results[,3], na.rm=T))
+`µm.
+
+```{r table1, echo=FALSE}
+big_border = fp_border(color="black", width = 2)
+small_border = fp_border(color="black", width = 1)
+set_flextable_defaults(
+  font.size = 11, font.family = "Cambria",
+  font.color = "#333333",
+  table.layout = "autofit",
+  border.color = "#333333",
+  padding.top = 3, padding.bottom = 3,
+  padding.left = 4, padding.right = 4)
+
+ft <- flextable(sample_id_results)
+ft <- set_caption(ft, caption = "Table 1. Plastic particle count by sample name.")
+ft <- set_header_labels(ft,
+                        sample_name = "Sample Name",
+                        count = "Count"
+                        )
+ft <- border_remove(x = ft)
+ft <- border_outer(ft, part="all", border = big_border )
+ft <- border_inner_h(ft, part="all", border = small_border )
+ft <- border_inner_v(ft, part="all", border = small_border )
+ft
+```
+##
+
+```{r table2, echo=FALSE}
+ft2 <- flextable(polymer_results)
+ft2 <- set_caption(ft2, caption = "Table 2. Types of polymers detected, particle count by polymer type, and percent of total polymers by each polymer type for all samples analyzed by FTIR.")
+ft2 <- set_header_labels(ft2,
+                        material_class = "Polymer Class",
+                        count = "Count",
+                        percent = "Percent"
+                        )
+ft2 <- border_remove(x = ft2)
+ft2 <- border_outer(ft2, part="all", border = big_border )
+ft2 <- border_inner_h(ft2, part="all", border = small_border )
+ft2 <- border_inner_v(ft2, part="all", border = small_border )
+ft2
+```
+##
+
+```{r table3, echo=FALSE}
+ft3 <- flextable(average_results)
+ft3 <- set_caption(ft3, caption = "Table 3. Average area and average maximum length of particles for each Villanova sample analyzed by FTIR.")
+ft3 <- set_header_labels(ft3,
+                        sample_name = "Sample Name",
+                        avgarea = "Avg Area (um2)",
+                        avemaxlen = "Avg Max Length (um)",
+                        count = "Count"
+                        )
+ft3 <- border_remove(x = ft3)
+ft3 <- border_outer(ft3, part="all", border = big_border )
+ft3 <- border_inner_h(ft3, part="all", border = small_border )
+ft3 <- border_inner_v(ft3, part="all", border = small_border )
+ft3
+```
+
+##
+## QA/QC Data
+The MIPPR laboratory ran a laboratory procedural blank (PB) with each batch of samples (soil and water). One liter of microplastics-analysis-grade (MAG) water was prepared and analyzed using the same procedures as the Villanova samples. The results are reported in Table 1 and 5A and the data are included in the attached data package. The results of the procedural blanks provide indication of possible laboratory contamination introduced during sample preparation and analysis.
+
+The MIPPR laboratory tracks the accuracy and precision of the analytical method through Laboratory Fortified Blanks (LFBs). LFBs were run with each batch of samples (soil and water). The data are presented in Table 5B and 5C and summarized here. An LFB is a sample of MAG water spiked with a known type and quantity of plastic material. LFBs were spiked with polyamide 66 (sized >500µm), cellulose acetate (sizes 212-500µm), and red beads (polyolefins sized 75-90 µm). The recoveries of the spiked polymers were 100, 103 and 92% respectively for the soil batch (Table 5B). These recoveries are within the acceptable range of 50% -150%, as defined by the method.
+The recoveries of the spiked polymers were 100, 75, and 20% respective accuracy levels for the water batch (Table 5C). One of these recoveries, the red beads in the 20-212 µm range,  is not within the acceptable range of 50% -150%, as defined by the method.
+
+```{r qaqc, echo=FALSE}
+  ##########################################################################################################################
+  #Fill in the QAQC section tables.
+  ##########################################################################################################################
+```
+
+```{r table5a, echo=FALSE}
+   table5a <- data.frame(col1 = c(">500um", "212-500um", "20-200um"), 
+                  col2 = c("PA66", "Cellulose Acetate", "Polyolefins"),
+                  col3 = c("Value1", "Value2", "Value3"),
+                  col4 = c("Value1", "Value2", "Value3"),
+                  col5 = c("Value1", "Value2", "Value3"))
+                  
+  ft5a <- flextable(table5a)
+  ft5a <- set_caption(ft5a, caption = "Table 5A. Types of polymers detected, particle count by polymer type, and percent of total polymers by each polymer type for the FTIR analyses of MIPPR Procedural Blanks.")
+  ft5a <- set_header_labels(ft5a,
+                        col1 = "Size Class",
+                        col2 = "Types of Plastic",
+                        col3 = "Pre-Count",
+                        col4 = "Post-Count",
+                        col5 = "Percent Recovery"
+                        )
+  ft5a <- border_remove(x = ft5a)
+  ft5a <- border_outer(ft5a, part="all", border = big_border )
+  ft5a <- border_inner_h(ft5a, part="all", border = small_border )
+  ft5a <- border_inner_v(ft5a, part="all", border = small_border )
+  ft5a
+
+```
+
+```{r table5b, echo=FALSE}
+  table5b <- data.frame(col1 = c(">500um", "212-500um", "20-200um"), 
+                  col2 = c("PA66", "Cellulose Acetate", "Polyolefins"),
+                  col3 = c("Value1", "Value2", "Value3"),
+                  col4 = c("Value1", "Value2", "Value3"),
+                  col5 = c("Value1", "Value2", "Value3"))
+                  
+  ft5b <- flextable(table5b)
+  ft5b <- set_caption(ft5b, caption = "Table 5B. Recovery of spiked compounds in MIPPR_LFB03_25APR24 used for soil samples.")
+  ft5b <- set_header_labels(ft5b,
+                        col1 = "Size Class",
+                        col2 = "Types of Plastic",
+                        col3 = "Pre-Count",
+                        col4 = "Post-Count",
+                        col5 = "Percent Recovery"
+                        )
+  ft5b <- border_remove(x = ft5b)
+  ft5b <- border_outer(ft5b, part="all", border = big_border )
+  ft5b <- border_inner_h(ft5b, part="all", border = small_border )
+  ft5b <- border_inner_v(ft5b, part="all", border = small_border )
+  ft5b
+```
+##
+```{r table5c, echo=FALSE}
+  table5c <- data.frame(col1 = c(">500um", "212-500um", "20-200um"), 
+                  col2 = c("PA66", "Cellulose Acetate", "Polyolefins"),
+                  col3 = c("Value1", "Value2", "Value3"),
+                  col4 = c("Value1", "Value2", "Value3"),
+                  col5 = c("Value1", "Value2", "Value3"))
+                  
+  ft5c <- flextable(table5c)
+  ft5c <- set_caption(ft5c, caption = "Table 5C. Recovery of spiked compounds in MIPPR_LFB(05)_28MAR24 used for water samples.")
+  ft5c <- set_header_labels(ft5c,
+                        col1 = "Size Class",
+                        col2 = "Types of Plastic",
+                        col3 = "Pre-Count",
+                        col4 = "Post-Count",
+                        col5 = "Percent Recovery"
+                        )
+  ft5c <- border_remove(x = ft5c)
+  ft5c <- border_outer(ft5c, part="all", border = big_border )
+  ft5c <- border_inner_h(ft5c, part="all", border = small_border )
+  ft5c <- border_inner_v(ft5c, part="all", border = small_border )
+  ft5c
+```
+##
+
+```{r notes, echo=FALSE}
+  ##########################################################################################################################
+  #Fill in the notes section.
+  ##########################################################################################################################
+```
+## NOTES
+
+
+
+
+##
+```{r signature, echo=FALSE, out.width="25%"}
+knitr::include_graphics("SMooreSig2.png", error = FALSE)
+
+```
+
+**Shelly Moore**
+
+**Executive Director – Moore Institute for Plastic Pollution Research**
+
+
+## References:
+
+Ariyah Thomas, Joseph Marchand, Guenter D. Schwoerer, Elizabeth C. Minor, and Melissa A. Maurer-Jones, 2024. Size Distributions of Microplastics in the St Louis Estuary and Western Lake Superior. Environmental Science & Technology 2024 58 (19), 8480-8489
+
+CA Health & Safety Code § 116376 (2022)
+
+De Frond H, Thornton Hampton L, Kotar S, Gesulga K, Matuch C, Lao W, Weisberg SB, Wong CS, Rochman CM. 2022. Monitoring microplastics in drinking water: An interlaboratory study to inform effective methods for quantifying and characterizing microplastics. Chemosphere. 2022 Jul;298:134282. 
+
+De Frond H, O'Brien AM, Rochman CM. 2023. Representative subsampling methods for the chemical identification of microplastic particles in environmental samples. Chemosphere. 2023 Jan;310:136772.
+
+Moore Institute of Plastic Pollution Research, 2024. Quality Manual v1.1.
+
+Southern California Coastal Water Research Project Authority. 2020. MICROPLASTIC MEASUREMENT METHODS EVALUATION STUDY Fourth Version for Participant Use Version 4.00 February 14, 2020
+State Water Resources Control Board. SWB-MP1-rev1. Standard Operating Procedures for Extraction and Measurement by Infrared Spectroscopy of Microplastic Particles in Drinking Water, Revised version May 27, 2022.
