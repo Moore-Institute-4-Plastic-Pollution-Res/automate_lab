@@ -9,6 +9,9 @@ library(magick)
 library(cluster)
 library(googledrive)
 
+# Load all R scripts in the folder
+walk(list.files(path = "R", pattern = "\\.R$", full.names = TRUE), source)
+
 #Run once
 # check if it has been installed or not 
 get_lib(c("mediod", "derivative"))
@@ -17,46 +20,17 @@ get_lib(c("mediod", "derivative"))
 # Authorize Google Drive Connection 
 drive_auth()
 
-# Access ID of all files in each folder
-files <- c("spectra", "sample data", "images")
+# Ask User the name of the folder they want to access
+project_name <- readline(prompt = "Enter the Name of the Google Drive Folder for this Project: ")
 
-for (file in files) {}
-spectra <- shared_drive_find("test_data") |> 
-    drive_ls("spectra") |> 
-    drive_ls() 
+# Access ID of all files in each folder --------------------------------------
+folders_of_interest <- c("Spreadsheets", "Images", "Spectra")
 
-sample_data <- shared_drive_find("test_data") |>
-    drive_ls("sample data") |> 
-    drive_ls()
+# Create folders to store data any project name
+create_folders(project_name = project_name)
 
-images <- shared_drive_find("test_data") |> 
-    drive_ls("images") |> 
-    drive_ls()
-
-
-
-
-
-
-# Create folders to store files downloaded
-if (!dir.exists("spectra_data_download")) {
-    dir.create("spectra_data_download")
-} else if (!dir.exists("sample_data_download")) {
-    dir.create("sample_data_download")
-} else if (!dir.exists("images_download")){
-    dir.create("images_download")
-}
-
-# Download data
-for (i in 1:nrow(spectra)){
-    
-    # File name
-    file_name <- spectra$name[i]
-    # Set download path
-    dest_path <- file.path("spectra_data_download", file_name)
-    # Download
-    drive_download(spectra[i,], path = dest_path, overwrite = TRUE)
-}
+# Across the folders of interest download the folder content
+data_download(drive_name = "Projects", project_name = project_name)
 
 
 # ----------------------------- Functions ---------------------------------
