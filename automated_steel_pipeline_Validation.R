@@ -8,6 +8,7 @@ library(mmand)
 library(magick)
 library(cluster)
 library(googledrive)
+library(purrr)
 
 # Load all R scripts in the folder
 walk(list.files(path = "R", pattern = "\\.R$", full.names = TRUE), source)
@@ -18,7 +19,7 @@ get_lib(c("mediod", "derivative"))
 
 #------------------- Google Drive File Download ------------------------------
 # Authorize Google Drive Connection 
-drive_auth()
+drive_auth(cache = ".secrets/")
 
 # Ask User the name of the folder they want to access
 project_name <- readline(prompt = "Enter the Name of the Google Drive Folder for this Project: ")
@@ -88,6 +89,7 @@ lib <- filter_spec(lib,
                      #                                  ) & 
                        lib$metadata$spectrum_type == "ftir") #This improves accuracy 10%
 
+# Material metadata rename and group similar material class
 lib$metadata <- lib$metadata %>%
     mutate(material_class = ifelse(material_class %in% c("polyacrylamides", "polyamides (polylactams)"), "poly(acrylamide/amid)s", material_class)) %>%
     mutate(material_class = ifelse(material_class %in% c("polyterephthalates", "polyesters", "polyethers (polyglycols, oxyalkylenes, glycidyl ethers & cyclic ethers)", "polydiglycidyl ethers (polyepoxides, polyhydroxyethers, phenoxy)"), "poly(esters/ethers/diglycidylethers/terephthalates)s", material_class)) 
@@ -111,13 +113,24 @@ files <- list.files(path = wd,
                     pattern = "(\\.dat$)|(\\.img$)",  
                     full.names = T)
 
+files
+
+
 files_hdr <- list.files(path = wd, 
                         pattern = ".hdr$",  
                         full.names = T)
 
 img <- gsub(".dat", ".JPG", files)
 
-gsub(".dat", ".hdr", files[!file.exists(gsub(".dat", ".hdr", files))])
+img
+
+# check images in folder
+# list.files(path = wd,
+#            pattern = ".JPG$", 
+#            full.names = TRUE)
+
+# checks there are images, spectra, and maps of the same name 
+gsub(".hdr", ".dat", files_hdr[!file.exists(gsub(".hdr", ".dat", files_hdr))])
 gsub(".hdr", ".dat", files_hdr[!file.exists(gsub(".hdr", ".dat", files_hdr))])
 img[!file.exists(img)]
 
@@ -148,13 +161,13 @@ img[!file.exists(img)]
                      #bottom_left = list(c(171, 472)),
                      #top_right = list(c(632, 10)),
                      #origins = NULL, 
-                     spectral_smooth = F, 
+                     spectral_smooth = T, 
                      #sigma1 = c(0.001,2),
                      #sigma2 = c(0.001,2),
                      #spatial_smooth = T,
                      close = F,
                      adj_map_baseline = F, #Probably needs to be updated somehow because currently very small change and decreasing id accuracy. 
-                     sn_threshold = 0.6, #0.04 the lowest signal considered "particles"
+                     sn_threshold = 0.01, #0.01 the lowest signal considered "particles"
                      cor_threshold = 0.66, #the lowest level you would consider something known
                      area_threshold = 1, #to remove artefacts from background. 
                      label_unknown = F, #whether to scrub information when below correlation threshold.
@@ -162,19 +175,21 @@ img[!file.exists(img)]
                      remove_unknown = F,
                      pixel_length = 25, #25 conversion from pixels to length, set up for microns
                      metric = "sig_times_noise", #technique for the signal
-                     abs = T, #F This determines whether to take the absolute value of the metric.
+                     abs = F, #F This determines whether to take the absolute value of the metric.
                      particle_id_strategy = "collapse", #This describes how the matching happens. 
                      vote_count = 10,
                      collapse_function = median,
                      k = 1,
                      k_weighting = "mean", #or multiple
                      wd = wd, #will put results here. 
-                     types = c("particle_heatmap_thresholded",
-                               "particle_heatmap", 
+                     types = c(
+                        "particle_heatmap_thresholded",
+                                "particle_heatmap", 
                                "particle_details",
                                "particle_summary",
-                               "particle_image",
-                               "spectra_processed"),
+                                "particle_image",
+                                "spectra_processed"
+                               ),
                      by = c("sample", 
                             "all"),
                      width = 1000, 
