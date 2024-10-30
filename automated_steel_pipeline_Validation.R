@@ -25,14 +25,13 @@ drive_auth(cache = ".secrets/")
 project_name <- readline(prompt = "Enter the Name of the Google Drive Folder for this Project: ")
 
 # Access ID of all files in each folder --------------------------------------
-folders_of_interest <- c("Spreadsheets", "Images", "Spectra")
+folders_of_interest <- c("Images", "Spectra")
 
 # Create folders to store data any project name
-create_folders(project_name = project_name)
-
-# Across the folders of interest download the folder content
-data_download(drive_name = "Projects", project_name = project_name)
-
+# Create output folder
+if(!dir.exists(file.path(project_name, "Spectral_Results"))){
+  dir.create(file.path(project_name, "Spectral_Results", recursive = TRUE))
+}
 
 # ----------------------------- Functions ---------------------------------
 particle_image <- function(proc_map_metadata, map_metadata, material_class, pixel_length = 25, origin, title){
@@ -96,7 +95,7 @@ lib$metadata <- lib$metadata %>%
 
 #Set this ----
 #You'll set this wherever you put your zip folders. C:/Users/winco/OneDrive/Documents/Positive_Controls
-wd <- "Template/Raw_Data" 
+wd <- file.path(project_name, "Spectral_Results")
 
 #Unzip files in batch ----
 # zip_files <- list.files(path = wd,
@@ -155,16 +154,18 @@ img[!file.exists(img)]
 #debug(analyze_features)
 #options(error = browser)
 #files = files[12]
-    analyze_features(files = files, 
+    analyze_features(drive_name = "Projects", 
+                     project_name = project_name,
+                     folders_of_interest = folders_of_interest,
                      lib = lib,
-                     img = img,#"C:\\Users\\winco\\OneDrive\\Documents\\Positive_Controls\\Mosaic Image files\\Recovery_red_beads_75-90um_5um-screen.JPG",
+                     #img = img,#"C:\\Users\\winco\\OneDrive\\Documents\\Positive_Controls\\Mosaic Image files\\Recovery_red_beads_75-90um_5um-screen.JPG",
                      #bottom_left = list(c(171, 472)),
                      #top_right = list(c(632, 10)),
                      #origins = NULL, 
-                     spectral_smooth = T, 
+                     spectral_smooth = F, 
                      #sigma1 = c(0.001,2),
                      #sigma2 = c(0.001,2),
-                     #spatial_smooth = T,
+                     #spatial_smooth = ,
                      close = F,
                      adj_map_baseline = F, #Probably needs to be updated somehow because currently very small change and decreasing id accuracy. 
                      sn_threshold = 0.01, #0.01 the lowest signal considered "particles"
@@ -181,7 +182,7 @@ img[!file.exists(img)]
                      collapse_function = median,
                      k = 1,
                      k_weighting = "mean", #or multiple
-                     wd = wd, #will put results here. 
+                     wd = paste0(project_name,"/Spectral_Results"), #will put results here. 
                      types = c(
                         "particle_heatmap_thresholded",
                                 "particle_heatmap", 
