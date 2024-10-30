@@ -6,13 +6,13 @@ analyze_features <- function(files,
                              adj_map_baseline = F,
                              material_class = "material_class",
                              origins = list(x = rep(0, length(files)), y = rep(0, length(files))),
-                             spectral_smooth = FALSE,
+                             spectral_smooth = TRUE,
                              sigma1 = c(1, 1, 1),
-                             spatial_smooth = FALSE,
+                             spatial_smooth = TRUE,
                              sigma2 = c(3, 3),
                              close = F,
                              close_kernel = c(4, 4),
-                             sn_threshold = 0.04,
+                             sn_threshold = 0.01,
                              cor_threshold = 0.7,
                              area_threshold = 1,
                              label_unknown = F,
@@ -113,10 +113,6 @@ analyze_features <- function(files,
   if (!all(is.character(units)))
     stop("Incorrect units")
   
-  #Extracts the file names
-  file_names <- gsub("(.*/)|(\\..{1,3}$)", "", files)
-  
-  
   # img = NULL
   # bottom_left = NULL
   # top_right = NULL
@@ -124,13 +120,13 @@ analyze_features <- function(files,
   # adj_map_baseline = F
   # material_class = "material_class"
   # origins = list(x = rep(0, length(files)), y = rep(0, length(files)))
-  # spectral_smooth = FALSE
+  # spectral_smooth = TRUE
   # sigma1 = c(1, 1, 1)
   # spatial_smooth = FALSE
   # sigma2 = c(3, 3)
   # close = F
   # close_kernel = c(4, 4)
-  # sn_threshold = 0.04
+  # sn_threshold = 0.01
   # cor_threshold = 0.7
   # area_threshold = 1
   # label_unknown = F
@@ -141,7 +137,6 @@ analyze_features <- function(files,
   # abs = F
   # k = 1
   # k_weighting = "mean"
-  # wd
   # particle_id_strategy = "collapse"
   # vote_count = Inf
   # collapse_function = median
@@ -162,9 +157,12 @@ analyze_features <- function(files,
   # height = 850
   # units = "px"
   # 
+  # # file = 2
+  # 
+  # file = 2
   
-  
-  
+  #Extracts the file names
+  file_names <- gsub("(.*/)|(\\..{1,3}$)", "", files)
   
   #Corrects names to not throw error with some functions
   lib$metadata[[material_class]] <- gsub("/", "_", lib$metadata[[material_class]])
@@ -293,8 +291,22 @@ analyze_features <- function(files,
     
     #Auto detect the in the images using the red boxes.
     if (is.null(bottom_left[[file]]) & !is.null(img[file])) {
-      mosaic <- jpeg::readJPEG(img[file])
       
+      # Catch images that cannot be read
+      mosaic <- tryCatch(
+        {
+          jpeg::readJPEG(img[file])
+        },
+        error = function(e){
+          message("Error": e$message)
+          NULL
+        },
+        warning = function(w){
+          message("Warning:", w$message)
+          NULL
+        }
+      )
+
       # Identify red pixels based on the specified condition
       red_pixels <- mosaic[, , 1] * 255 > 50 &
         mosaic[, , 1] > 2 * mosaic[, , 2] & mosaic[, , 1] > 2 * mosaic[, , 3]
