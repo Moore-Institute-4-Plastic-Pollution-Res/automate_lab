@@ -1,4 +1,4 @@
-analyze_features <- function(files,
+analyze_features_00 <- function(files,
                              img = NULL,
                              bottom_left = NULL,
                              top_right = NULL,
