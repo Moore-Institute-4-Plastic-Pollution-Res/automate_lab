@@ -27,11 +27,12 @@ project_name <- readline(prompt = "Enter the Name of the Google Drive Folder for
 # Access ID of all files in each folder --------------------------------------
 folders_of_interest <- c("Images", "Spectra")
 
-# Create folders to store data any project name
-# Create output folder
+# Create folders to store data any project  name
+# Create output folder ----- needs to be moved into
 if(!dir.exists(file.path(project_name, "Spectral_Results"))){
-  dir.create(file.path(project_name, "Spectral_Results", recursive = TRUE))
+  dir.create(file.path(project_name, "Spectral_Results"))
 }
+
 
 # ----------------------------- Functions ---------------------------------
 particle_image <- function(proc_map_metadata, map_metadata, material_class, pixel_length = 25, origin, title){

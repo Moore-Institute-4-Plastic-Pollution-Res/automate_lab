@@ -1,3 +1,4 @@
+# double check this function in MAC by removing OpenSpecy
 get_lib <- function(type = c("derivative", 
                              "nobaseline", 
                              "raw", 
@@ -46,8 +47,7 @@ get_lib <- function(type = c("derivative",
     message("Use 'load_lib()' to load the library")
     
     
-  } else {
-    print("Already Installed")
-  }
+  } 
   
 }
+
