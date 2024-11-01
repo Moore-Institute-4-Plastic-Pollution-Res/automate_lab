@@ -44,6 +44,14 @@ analyze_features <- function(drive_name, project_name,
                              height = 850,
                              units = "px"
                              ) {
+  # Create folders ----
+  if(!dir.exists(file.path(project_name))){
+    dir.create(file.path(project_name))
+  }
+  if(!dir.exists(file.path(project_name, "Spectral_Results"))){
+    dir.create(file.path(project_name, "Spectral_Results"))
+  }
+  
   # Set base directory of files downloaded and analyzed
   base_dir <- file.path(project_name, "Raw_Data")
   
@@ -54,12 +62,21 @@ analyze_features <- function(drive_name, project_name,
   # Look through every file in the folders Spectra & Mosaic Image
   for (folder in folders_of_interest) {
     
-    # Get all drive file names
-    data_search <- shared_drive_find("Project") |> 
-      drive_ls("Customer Projects") |> 
-      drive_ls(project_name) |> 
-      drive_ls(folder) |> 
+    #Get all drive file names
+    data_search <- shared_drive_find("Project") |>
+      drive_ls("Customer Projects") |>
+      drive_ls(project_name) |>
+      drive_ls("Mosaic_Image") |>
       drive_ls()
+
+    # data_search <- shared_drive_find("Project") |> 
+    #   drive_ls("Customer Projects") |> 
+    #   drive_ls() |> 
+    #   filter(name %in% project_name) |> 
+    #   drive_ls("SFEI_01") |> 
+    #   drive_ls("iN10 Data") |> 
+    #   drive_ls(folder) |>  
+    #   drive_ls()
     
     data_all <- bind_rows(data_all, data_search)
   }
@@ -72,7 +89,7 @@ analyze_features <- function(drive_name, project_name,
     
     matching_files <- data_all |> 
       filter(grepl(unique_names, name))
-    
+    print(matching_files)
     # Create temp file 
     if (dir.exists(base_dir)){
     unlink(base_dir, recursive = TRUE)
@@ -93,6 +110,7 @@ analyze_features <- function(drive_name, project_name,
         drive_download(matching_files[file, ], path = dest_path, overwrite = TRUE)
       }, error = function(e) {
         message("Error downloading file: ", file_name, "\n", e)
+        next
       })
       
       
@@ -108,10 +126,35 @@ analyze_features <- function(drive_name, project_name,
                             pattern = ".hdr$",  
                             full.names = T)
     
+    
+    files_dat <- list.files(path = wd, 
+                            pattern = ".dat$",  
+                            full.names = T)
+    
     img <- gsub(".dat", ".JPG", files)
     
-    
-    
+    # Check for sample that is missing either image, .hdr or .dat files
+    tryCatch({
+      missing_dat_files <- gsub(".hdr", ".dat", files_hdr[!file.exists(gsub(".hdr", ".dat", files_hdr))])
+      
+      missing_hdr_files <- gsub(".dat", ".hdr", files_dat[!file.exists(gsub(".gsub", ".dat", files_dat))])
+      
+      if (!is_empty(missing_dat_files) |
+          !is_empty(missing_hdr_files))
+        stop(cat("Missing spectra file or incorrect naming for", unique_names))
+    }, error = function(e) {
+      cat("ERROR:", conditionMessage(e), "\n")
+      next
+    })
+    tryCatch({
+      if (!is_empty(img))
+        stop(cat("Missing image or incorrect naming", unique_names))
+    }, error = function(e) {
+      cat("ERROR:", conditionMessage(e), "\n")
+      next
+    })
+  
+
     origins <- list(x = rep(0, length(files)), y = rep(0, length(files)))
     
     #Variable input tests.
@@ -185,11 +228,6 @@ analyze_features <- function(drive_name, project_name,
       stop("Incorrect units")
     
     
-    
-    
-    
-    
-    
     #Extracts the file names
     file_names <- gsub("(.*/)|(\\..{1,3}$)", "", files) 
     
@@ -208,10 +246,27 @@ analyze_features <- function(drive_name, project_name,
       if (grepl(".dat", files[file])) {
         map <- read_envi(files[file], spectral_smooth = spectral_smooth, sigma = sigma1) |>
           adj_intens(type = "transmittance", make_rel = F) #If converting from transmittance, otherwise hash out
-      } else{
-        map <- read_any(files[file])
+      } else {
+        # Error for files that are corrupt or have issues with being read
+        tryCatch({
+          map <- read_any(files[file])
+          stop(paste("ERROR:", files[file], "is unable to be read. Reupload this file to the drive."))
+        }, error = function(e) {
+          file_error <<- TRUE
+          cat("ERROR:", conditionMessage(e), "\n")
+        })
+        
+        # If an error occurred, break out of the inner loop
+        if (file_error) break
       }
       
+      # If an error occurred, skip to the next unique_name
+      if (file_error) {
+        cat("Skipping analysis for", unique_name, "due to file errors.\n")
+        next
+      }
+        
+      }
       
       #Correct baseline if specified
       if (adj_map_baseline) {
@@ -935,46 +990,48 @@ analyze_features <- function(drive_name, project_name,
       print(time_diff)
     }
     
-    #After all samples are finished, concatenate the summary, details, adn spectra csv tables.
-    if ("particle_summary" %in% types & "all" %in% by) {
-      if (file.exists(paste0(wd, "/particle_summary_all.csv")))
-        file.remove(paste0(wd, "/particle_summary_all.csv"))
-      
-      fwrite(rbindlist(lapply(
-        list.files(
-          path = wd,
-          pattern = "^particle_summary.*\\.csv$",
-          full.names = T
-        ),
-        fread
-      ), fill = T),
-      paste0(wd, "/particle_summary_all.csv"))
-    }
-    if ("particle_details" %in% types & "all" %in% by) {
-      if (file.exists(paste0(wd, "/particle_details_all.csv")))
-        file.remove(paste0(wd, "/particle_details_all.csv"))
-      
-      fwrite(rbindlist(lapply(
-        list.files(
-          path = wd,
-          pattern = "^particle_details.*\\.csv$",
-          full.names = T
-        ),
-        fread
-      ), fill = T),
-      paste0(wd, "/particle_details_all.csv"))
-    }
-    
-    if ("median_spec" %in% types & "all" %in% by) {
-      fwrite(rbindlist(lapply(
-        list.files(
-          path = wd,
-          pattern = "^median_spec.*\\.csv$",
-          full.names = T
-        ),
-        fread
-      ), fill = T),
-      paste0(wd, "/median_spec_all.csv"))
-    }
+   
   }
+  #After all samples are finished, concatenate the summary, details, ann spectra csv tables.
+  if ("particle_summary" %in% types & "all" %in% by) {
+    if (file.exists(paste0(wd, "/particle_summary_all.csv")))
+      file.remove(paste0(wd, "/particle_summary_all.csv"))
+    
+    fwrite(rbindlist(lapply(
+      list.files(
+        path = wd,
+        pattern = "^particle_summary.*\\.csv$",
+        full.names = T
+      ),
+      fread
+    ), fill = T),
+    paste0(wd, "/particle_summary_all.csv"))
+  }
+  if ("particle_details" %in% types & "all" %in% by) {
+    if (file.exists(paste0(wd, "/particle_details_all.csv")))
+      file.remove(paste0(wd, "/particle_details_all.csv"))
+    
+    fwrite(rbindlist(lapply(
+      list.files(
+        path = wd,
+        pattern = "^particle_details.*\\.csv$",
+        full.names = T
+      ),
+      fread
+    ), fill = T),
+    paste0(wd, "/particle_details_all.csv"))
+  }
+  
+  if ("median_spec" %in% types & "all" %in% by) {
+    fwrite(rbindlist(lapply(
+      list.files(
+        path = wd,
+        pattern = "^median_spec.*\\.csv$",
+        full.names = T
+      ),
+      fread
+    ), fill = T),
+    paste0(wd, "/median_spec_all.csv"))
+  }
+  
 }
