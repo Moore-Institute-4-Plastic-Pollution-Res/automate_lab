@@ -25,13 +25,9 @@ drive_auth(cache = ".secrets/")
 project_name <- readline(prompt = "Enter the Name of the Google Drive Folder for this Project: ")
 
 # Access ID of all files in each folder --------------------------------------
-folders_of_interest <- c("Images", "Spectra")
+folders_of_interest <- c("Mosaic_Images", "Export_Files")
 
 # Create folders to store data any project  name
-# Create output folder ----- needs to be moved into
-if(!dir.exists(file.path(project_name, "Spectral_Results"))){
-  dir.create(file.path(project_name, "Spectral_Results"))
-}
 
 
 # ----------------------------- Functions ---------------------------------
@@ -108,31 +104,10 @@ wd <- file.path(project_name, "Spectral_Results")
 #     unzip(zipfile = zip_file,exdir=wd)  # unzip your file
 # }
 
-
-files <- list.files(path = wd, 
-                    pattern = "(\\.dat$)|(\\.img$)",  
-                    full.names = T)
-
-files
-
-
-files_hdr <- list.files(path = wd, 
-                        pattern = ".hdr$",  
-                        full.names = T)
-
-img <- gsub(".dat", ".JPG", files)
-
-img
-
 # check images in folder
 # list.files(path = wd,
 #            pattern = ".JPG$", 
 #            full.names = TRUE)
-
-# checks there are images, spectra, and maps of the same name 
-gsub(".hdr", ".dat", files_hdr[!file.exists(gsub(".hdr", ".dat", files_hdr))])
-gsub(".hdr", ".dat", files_hdr[!file.exists(gsub(".hdr", ".dat", files_hdr))])
-img[!file.exists(img)]
 
 #Remove already processed data
 #files <- files[!file.exists(paste0(dirname(files), "/particles_", gsub("\\.dat$", ".rds", basename(files))))]
@@ -155,7 +130,10 @@ img[!file.exists(img)]
 #debug(analyze_features)
 #options(error = browser)
 #files = files[12]
-    analyze_features(drive_name = "Projects", 
+
+start = Sys.time()
+
+analyze_features(drive_name = "Projects", 
                      project_name = project_name,
                      folders_of_interest = folders_of_interest,
                      lib = lib,
@@ -197,6 +175,12 @@ img[!file.exists(img)]
                      width = 1000, 
                      height = 1000, 
                      units = "px")
+
+
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+
+
 
     # All study figures ----
     study_results <- fread(paste0(wd, "/particle_details_all.csv")) %>%
