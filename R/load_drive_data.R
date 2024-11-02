@@ -55,8 +55,7 @@ analyze_features <- function(drive_name, project_name,
   # Set base directory of files downloaded and analyzed
   base_dir <- file.path(project_name, "Raw_Data")
   
-
-    # Set blank data frame
+  # Set blank data frame
   data_all <- as_dribble()
   
   # Look through every file in the folders Spectra & Mosaic Image
@@ -66,7 +65,7 @@ analyze_features <- function(drive_name, project_name,
     data_search <- shared_drive_find("Project") |>
       drive_ls("Customer Projects") |>
       drive_ls(project_name) |>
-      drive_ls("Mosaic_Image") |>
+      drive_ls(folder) |>
       drive_ls()
 
     # data_search <- shared_drive_find("Project") |> 
@@ -90,21 +89,43 @@ analyze_features <- function(drive_name, project_name,
     matching_files <- data_all |> 
       filter(grepl(unique_names, name))
     print(matching_files)
+    
+    # Here is where we check if all the necessary files are available 
+    # without downloading based on matching files
+    
+    # Check if they are present
+    hdr_present <- any(grepl(".hdr$", matching_files$name))
+    dat_present <- any(grepl(".dat$", matching_files$name))
+    img_present <- any(grepl(".JPG$", data_all$name))
+    
+    if (!hdr_present || !dat_present || !img_present) {
+      if(!hdr_present){
+        cat("Warning:", unique_names, " missing or misnaming of .hdr file.\n")
+      }
+      if(!dat_present){
+        cat("Warning:", unique_names, "missing or misnaming of .dat file. \n")
+      }
+      if(!img_present){
+        cat("Warning:", unique_names, " missing or misnaming of mosaic image. \n ")
+      }
+      next
+    }
+
     # Create temp file 
     if (dir.exists(base_dir)){
     unlink(base_dir, recursive = TRUE)
     }
     dir.create(base_dir, recursive = TRUE)
-  
-    # Download files into temp file
+    
+    # Download every file in the grouped matching file pairs ---
     for (file in 1:nrow(matching_files)){
       
+      # Download files code here
       # File name
       file_name <- matching_files$name[file]
       # Set download path
       dest_path <- file.path(paste0(base_dir), file_name)
       
-      print(dest_path)
       # Download the file
       tryCatch({
         drive_download(matching_files[file, ], path = dest_path, overwrite = TRUE)
@@ -112,159 +133,34 @@ analyze_features <- function(drive_name, project_name,
         message("Error downloading file: ", file_name, "\n", e)
         next
       })
-      
-      
     }
-    
-    # Conduct analysis of files in temp folder ----
-    files <- list.files(path = base_dir, 
-                        pattern = "(\\.dat$)|(\\.img$)",  
-                        full.names = T)
-    
-    
-    files_hdr <- list.files(path = base_dir, 
-                            pattern = ".hdr$",  
-                            full.names = T)
-    
-    
-    files_dat <- list.files(path = wd, 
-                            pattern = ".dat$",  
-                            full.names = T)
-    
-    img <- gsub(".dat", ".JPG", files)
-    
-    # Check for sample that is missing either image, .hdr or .dat files
-    tryCatch({
-      missing_dat_files <- gsub(".hdr", ".dat", files_hdr[!file.exists(gsub(".hdr", ".dat", files_hdr))])
-      
-      missing_hdr_files <- gsub(".dat", ".hdr", files_dat[!file.exists(gsub(".gsub", ".dat", files_dat))])
-      
-      if (!is_empty(missing_dat_files) |
-          !is_empty(missing_hdr_files))
-        stop(cat("Missing spectra file or incorrect naming for", unique_names))
-    }, error = function(e) {
-      cat("ERROR:", conditionMessage(e), "\n")
-      next
-    })
-    tryCatch({
-      if (!is_empty(img))
-        stop(cat("Missing image or incorrect naming", unique_names))
-    }, error = function(e) {
-      cat("ERROR:", conditionMessage(e), "\n")
-      next
-    })
   
-
-    origins <- list(x = rep(0, length(files)), y = rep(0, length(files)))
+    # Filter to spectra data
+    spectra_files <- data_all %>% filter(grepl("(\\.dat$)|(\\.hdr$)", data_all$name))
     
-    #Variable input tests.
-    if (!all(particle_id_strategy %in% c("collapse", "all cell id", "particle cell vote")))
-      stop("Incorrect particle_id_strategy")
-    if (!all(is.character(files)))
-      stop("Incorrect files")
-    if (!all(is.character(img) | is.null(img)))
-      stop("Incorrect img")
-    if (!all(is.list(bottom_left) |
-             is.null(bottom_left)))
-      stop("Incorrect bottom_left")
-    if (!all(is.list(top_right) |
-             is.null(top_right)))
-      stop("Incorrect top_right")
-    if (!all(is_OpenSpecy(lib) | is.list(lib)))
-      stop("Incorrect lib")
-    if (!all(is.logical(adj_map_baseline)))
-      stop("Incorrect adj_map_baseline")
-    if (!all(is.character(material_class)))
-      stop("Incorrect material_class")
-    if (!all(is.list(origins)))
-      stop("Incorrect origins")
-    if (!all(is.logical(spectral_smooth)))
-      stop("Incorrect spectral_smooth")
-    if (!all(is.numeric(sigma1)))
-      stop("Incorrect sigma1")
-    if (!all(is.logical(spatial_smooth)))
-      stop("Incorrect spatial_smooth")
-    if (!all(is.numeric(sigma2)))
-      stop("Incorrect sigma2")
-    if (!all(is.logical(close)))
-      stop("Incorrect close")
-    if (!all(is.numeric(close_kernel)))
-      stop("Incorrect close_kernel")
-    if (!all(is.numeric(sn_threshold)))
-      stop("Incorrect sn_threshold")
-    if (!all(is.numeric(cor_threshold)))
-      stop("Incorrect cor_threshold")
-    if (!all(is.numeric(area_threshold)))
-      stop("Incorrect area_threshold")
-    if (!all(is.logical(label_unknown)))
-      stop("Incorrect label_unknown")
-    if (!all(is.logical(remove_nonplastic)))
-      stop("Incorrect remove_nonplastic")
-    if (!all(is.logical(remove_unknown)))
-      stop("Incorrect remove_nonplastic")
-    if (!all(is.numeric(pixel_length)))
-      stop("Incorrect pixel_length")
-    if (!all(is.character(metric)))
-      stop("Incorrect metric")
-    if (!all(is.logical(abs)))
-      stop("Incorrect abs")
-    if (!all(is.numeric(k)))
-      stop("Incorrect k")
-    if (!all(is.character(k_weighting)))
-      stop("Incorrect k_weighting")
-    if (!all(is.character(wd)))
-      stop("Incorrect wd")
-    if (!all(is.character(particle_id_strategy)))
-      stop("Incorrect particle_id_strategy")
-    if (!all(is.character(types)))
-      stop("Incorrect types")
-    if (!all(is.character(by)))
-      stop("Incorrect by")
-    if (!all(is.numeric(width)))
-      stop("Incorrect width")
-    if (!all(is.numeric(height)))
-      stop("Incorrect height")
-    if (!all(is.character(units)))
-      stop("Incorrect units")
+    img <- data_all %>% filter(grepl("\\.JPG$", data_all$name))
     
-    
-    #Extracts the file names
-    file_names <- gsub("(.*/)|(\\..{1,3}$)", "", files) 
-    
-    #Corrects names to not throw error with some functions
-    lib$metadata[[material_class]] <- gsub("/", "_", lib$metadata[[material_class]])
-    
-    #Loops through all files
-    for (file in 1:length(files)) {
+    # Read in spectra files
+    for (file in 1:length(spectra_files)) {
+      
       #Prints file names
-      print(files[file])
+      print(spectra_files[file])
       
       #Begins timer
       time_start = Sys.time()
       
-      #Read in the file
-      if (grepl(".dat", files[file])) {
-        map <- read_envi(files[file], spectral_smooth = spectral_smooth, sigma = sigma1) |>
-          adj_intens(type = "transmittance", make_rel = F) #If converting from transmittance, otherwise hash out
+      #Read in the file ---- should be instead set to the file path and list the spectra_files 
+      if (grepl(".dat", spectra_files[file])) {
+        map <- read_envi(spectra_files[file], spectral_smooth = spectral_smooth, sigma = sigma1)
       } else {
-        # Error for files that are corrupt or have issues with being read
-        tryCatch({
-          map <- read_any(files[file])
-          stop(paste("ERROR:", files[file], "is unable to be read. Reupload this file to the drive."))
-        }, error = function(e) {
-          file_error <<- TRUE
-          cat("ERROR:", conditionMessage(e), "\n")
-        })
-        
-        # If an error occurred, break out of the inner loop
-        if (file_error) break
-      }
-      
-      # If an error occurred, skip to the next unique_name
-      if (file_error) {
-        cat("Skipping analysis for", unique_name, "due to file errors.\n")
-        next
-      }
+        # Error for spectra_files that are corrupt or have issues with being read
+        # tryCatch({
+          map <- read_any(spectra_files[file])
+          stop(paste("ERROR:", spectra_files[file], "is unable to be read. Reupload this file to the drive."))
+        # }, error = function(e) {
+        #   cat("ERROR:", conditionMessage(e), "\n")
+        #   next
+        # })
         
       }
       
@@ -286,8 +182,8 @@ analyze_features <- function(drive_name, project_name,
         originx = gsub(",.*", "", gsub(".*X=", "", origin)) |> as.numeric()
         originy = gsub(".*Y=", "", origin) |> as.numeric()
       } else{
-        originx <- list(x = rep(0, length(files)), y = rep(0, length(files)))[[1]][file]
-        originy <- list(x = rep(0, length(files)), y = rep(0, length(files)))[[2]][file]
+        originx <- list(x = rep(0, length(spectra_files)), y = rep(0, length(spectra_files)))[[1]][file]
+        originy <- list(x = rep(0, length(spectra_files)), y = rep(0, length(spectra_files)))[[2]][file]
       }
       
       #Estimate the sig noise value on the raw data
@@ -374,12 +270,12 @@ analyze_features <- function(drive_name, project_name,
         next
       
       #Auto detect the in the images using the red boxes.
-      if (is.null(bottom_left[[file]]) & !is.null(img[file])) {
+      if (is.null(bottom_left[[file]]) & !is.null(img)) {
         
         # Catch images that cannot be read
         mosaic <- tryCatch(
           {
-            jpeg::readJPEG(img[file])
+            jpeg::readJPEG(img)
           },
           error = function(e){
             message("Error": e$message)
@@ -462,7 +358,7 @@ analyze_features <- function(drive_name, project_name,
           close = close,
           close_kernel = close_kernel,
           close_type = "box",
-          img[file],
+          img,
           bl,
           tr
         )
@@ -700,7 +596,7 @@ analyze_features <- function(drive_name, project_name,
       }
       
       #Plot overlay on mosaic
-      if (!is.null(img[file])) {
+      if (!is.null(img)) {
         map_dim <- c(length(unique(map$metadata$x)), length(unique(map$metadata$y)))
         xscale = (tr[1] - bl[1]) / map_dim[1]
         yscale = (bl[2] - tr[2]) / map_dim[2]
@@ -709,7 +605,7 @@ analyze_features <- function(drive_name, project_name,
         particles  = map$metadata$threshold
         
         # Convert the image to a raster
-        mosaic <- jpeg::readJPEG(img[file])
+        mosaic <- jpeg::readJPEG(img)
         image_raster <- as.raster(mosaic)
         
         # Create a matrix of coordinates for indexing
