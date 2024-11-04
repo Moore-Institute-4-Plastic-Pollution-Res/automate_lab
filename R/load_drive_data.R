@@ -88,8 +88,6 @@ analyze_features <- function(drive_name, project_name,
     
     matching_files <- data_all |> 
       filter(grepl(unique_names, name))
-    print(matching_files)
-    
     # Here is where we check if all the necessary files are available 
     # without downloading based on matching files
     
@@ -134,33 +132,36 @@ analyze_features <- function(drive_name, project_name,
         next
       })
     }
-  
-    # Filter to spectra data
-    spectra_files <- data_all %>% filter(grepl("(\\.dat$)|(\\.hdr$)", data_all$name))
     
-    img <- data_all %>% filter(grepl("\\.JPG$", data_all$name))
+    # Read in spectra from Raw Data folder (base_dir)
+    file <- list.files(path = base_dir,
+                       pattern = "(\\.dat$)|(\\.img$)",
+                       full.names = T)
     
-    # Read in spectra files
-    for (file in 1:length(spectra_files)) {
-      
-      #Prints file names
-      print(spectra_files[file])
-      
-      #Begins timer
-      time_start = Sys.time()
+    #Extracts the file names
+    file_names <- gsub("(.*/)|(\\..{1,3}$)", "", file)
+    
+    
+    origins = list(x = rep(0, length(file)), y = rep(0, length(file)))
+    
+    #Begins timer
+    time_start = Sys.time()
       
       #Read in the file ---- should be instead set to the file path and list the spectra_files 
-      if (grepl(".dat", spectra_files[file])) {
-        map <- read_envi(spectra_files[file], spectral_smooth = spectral_smooth, sigma = sigma1)
-      } else {
+      if (grepl(".dat", file)) {
+        map <- read_envi(file, spectral_smooth = spectral_smooth, sigma = sigma1)
+      } 
+      if (grepl(".hdr", file)) {
         # Error for spectra_files that are corrupt or have issues with being read
         # tryCatch({
-          map <- read_any(spectra_files[file])
-          stop(paste("ERROR:", spectra_files[file], "is unable to be read. Reupload this file to the drive."))
+          map <- read_any(file)
+          stop(paste("ERROR:", file, "is unable to be read. Reupload this file to the drive."))
         # }, error = function(e) {
         #   cat("ERROR:", conditionMessage(e), "\n")
-        #   next
+           next
         # })
+        
+      } else{
         
       }
       
@@ -182,8 +183,8 @@ analyze_features <- function(drive_name, project_name,
         originx = gsub(",.*", "", gsub(".*X=", "", origin)) |> as.numeric()
         originy = gsub(".*Y=", "", origin) |> as.numeric()
       } else{
-        originx <- list(x = rep(0, length(spectra_files)), y = rep(0, length(spectra_files)))[[1]][file]
-        originy <- list(x = rep(0, length(spectra_files)), y = rep(0, length(spectra_files)))[[2]][file]
+        originx <- list(x = rep(0, length(folder_wd)), y = rep(0, length(folder_Wd)))[[1]][file]
+        originy <- list(x = rep(0, length(folder_wd)), y = rep(0, length(folder_wd)))[[2]][file]
       }
       
       #Estimate the sig noise value on the raw data
@@ -218,7 +219,7 @@ analyze_features <- function(drive_name, project_name,
           scale_fill_viridis_c()
         
         ggsave(
-          filename = paste0("particle_heatmap_", file_names[file], ".png"),
+          filename = paste0("particle_heatmap_", file, ".png"),
           plot = plot,
           path = wd,
           width = width,
@@ -250,7 +251,7 @@ analyze_features <- function(drive_name, project_name,
           labs(x = "X (um)", y = "Y (um)")
         
         ggsave(
-          filename = paste0("particle_heatmap_thresholded", file_names[file], ".jpg"),
+          filename = paste0("particle_heatmap_thresholded", file, ".jpg"),
           plot = plot,
           path = wd,
           width = width,
@@ -884,7 +885,6 @@ analyze_features <- function(drive_name, project_name,
         saveRDS(time_diff, file = paste0(wd, "/time_", file_names[file], ".rds"))
       }
       print(time_diff)
-    }
     
    
   }
