@@ -6,9 +6,9 @@ analyze_features <- function(drive_name, project_name,
                              lib,
                              adj_map_baseline = F,
                              material_class = "material_class",
-                             spectral_smooth = TRUE,
+                             spectral_smooth = F,
                              sigma1 = c(1, 1, 1),
-                             spatial_smooth = TRUE,
+                             spatial_smooth = F,
                              sigma2 = c(3, 3),
                              close = F,
                              close_kernel = c(4, 4),
@@ -51,7 +51,7 @@ analyze_features <- function(drive_name, project_name,
   if(!dir.exists(file.path(project_name, "Spectral_Results"))){
     dir.create(file.path(project_name, "Spectral_Results"))
   }
-  
+
   # Set base directory of files downloaded and analyzed
   base_dir <- file.path(project_name, "Raw_Data")
   
@@ -94,18 +94,14 @@ analyze_features <- function(drive_name, project_name,
     # Check if they are present
     hdr_present <- any(grepl(".hdr$", matching_files$name))
     dat_present <- any(grepl(".dat$", matching_files$name))
-    img_present <- any(grepl(".JPG$", data_all$name))
+    img_present <- any(grepl("\\.jpg$|\\.JPG$", matching_files$name))
     
+    # Skip and log if any required file is missing
     if (!hdr_present || !dat_present || !img_present) {
-      if(!hdr_present){
-        cat("Warning:", unique_names, " missing or misnaming of .hdr file.\n")
-      }
-      if(!dat_present){
-        cat("Warning:", unique_names, "missing or misnaming of .dat file. \n")
-      }
-      if(!img_present){
-        cat("Warning:", unique_names, " missing or misnaming of mosaic image. \n ")
-      }
+      cat("Warning:", unique_names, 
+          if(!hdr_present) "missing .hdr file.\n",
+          if(!dat_present) "missing .dat file.\n",
+          if(!img_present) "missing image file (.JPG).\n")
       next
     }
 
@@ -116,27 +112,24 @@ analyze_features <- function(drive_name, project_name,
     dir.create(base_dir, recursive = TRUE)
     
     # Download every file in the grouped matching file pairs ---
-    for (file in 1:nrow(matching_files)){
-      
-      # Download files code here
-      # File name
-      file_name <- matching_files$name[file]
-      # Set download path
-      dest_path <- file.path(paste0(base_dir), file_name)
-      
-      # Download the file
-      tryCatch({
-        drive_download(matching_files[file, ], path = dest_path, overwrite = TRUE)
-      }, error = function(e) {
-        message("Error downloading file: ", file_name, "\n", e)
-        next
-      })
-    }
+      for (file in 1:nrow(matching_files)) {
+        tryCatch({
+          drive_download(matching_files[file, ], path = file.path(base_dir, matching_files$name[file]), overwrite = TRUE)
+        }, error = function(e) {
+          message("Error downloading file: ", matching_files$name[file], "\n", e)
+          next
+        })
+      }
     
     # Read in spectra from Raw Data folder (base_dir)
     file <- list.files(path = base_dir,
                        pattern = "(\\.dat$)|(\\.img$)",
                        full.names = T)
+    
+    img <- list.files(path = base_dir,
+                       pattern = "(\\.JPG$)|(\\.jpg$)",
+                       full.names = T)
+    
     
     #Extracts the file names
     file_names <- gsub("(.*/)|(\\..{1,3}$)", "", file)
@@ -148,43 +141,36 @@ analyze_features <- function(drive_name, project_name,
     time_start = Sys.time()
       
       #Read in the file ---- should be instead set to the file path and list the spectra_files 
-      if (grepl(".dat", file)) {
+    if (grepl(".dat", file)) {
         map <- read_envi(file, spectral_smooth = spectral_smooth, sigma = sigma1)
-      } 
-      if (grepl(".hdr", file)) {
-        # Error for spectra_files that are corrupt or have issues with being read
-        # tryCatch({
-          map <- read_any(file)
-          stop(paste("ERROR:", file, "is unable to be read. Reupload this file to the drive."))
-        # }, error = function(e) {
-        #   cat("ERROR:", conditionMessage(e), "\n")
-           next
-        # })
-        
-      } else{
-        
-      }
-      
+        # map <- read_envi("Template/Raw_Data/MIPPR_LFB03_25APR24_PDS1_lft.dat", spectral_smooth = spectral_smooth, sigma = sigma1)
+
+    }
+    
+    else{
+      map <- read_any(file)
+    }
+  
+  
       #Correct baseline if specified
       if (adj_map_baseline) {
         baseline <- median(as.matrix(map$spectra), na.rm = T)
-        print(baseline)
         map$spectra <- map$spectra - baseline
         
       }
       
       #extracts origins if available.
       if (!is.null(origins)) {
-        originx <- origins[[1]][file]
-        originy <- origins[[2]][file]
+        originx <- origins[[1]]
+        originy <- origins[[2]]
       } else if ("description" %in% names(map$metadata)) {
         #Auto attempts to extract origins if description available
         origin = unique(map$metadata$description)
         originx = gsub(",.*", "", gsub(".*X=", "", origin)) |> as.numeric()
         originy = gsub(".*Y=", "", origin) |> as.numeric()
       } else{
-        originx <- list(x = rep(0, length(folder_wd)), y = rep(0, length(folder_Wd)))[[1]][file]
-        originy <- list(x = rep(0, length(folder_wd)), y = rep(0, length(folder_wd)))[[2]][file]
+        originx <- rep(0, length(file))
+        originy <- rep(0, length(file))
       }
       
       #Estimate the sig noise value on the raw data
@@ -201,6 +187,9 @@ analyze_features <- function(drive_name, project_name,
         sigma = sigma2,
         abs = abs
       )
+      
+      map$metadata
+      
       
       #Create a heatmap of  the sig noise values
       if ("particle_heatmap" %in% types) {
@@ -219,20 +208,21 @@ analyze_features <- function(drive_name, project_name,
           scale_fill_viridis_c()
         
         ggsave(
-          filename = paste0("particle_heatmap_", file, ".png"),
-          plot = plot,
+          filename = paste0("particle_heatmap_", file_names, ".png"),
           path = wd,
+          plot = plot,
           width = width,
           height = height,
           units = units
         )
-        
+
         print(plot)
-        
+
         if (all(types == "particle_heatmap"))
           next
       }
-      
+  
+
       #Create a thresholded heatmap using the sig noise values and threshold
       if ("particle_heatmap_thresholded" %in% types) {
         plot <- ggplot() +
@@ -251,9 +241,9 @@ analyze_features <- function(drive_name, project_name,
           labs(x = "X (um)", y = "Y (um)")
         
         ggsave(
-          filename = paste0("particle_heatmap_thresholded", file, ".jpg"),
-          plot = plot,
+          filename = paste0("particle_heatmap_thresholded", file_names, ".jpg"),
           path = wd,
+          plot = plot,
           width = width,
           height = height,
           units = units
@@ -288,6 +278,7 @@ analyze_features <- function(drive_name, project_name,
           }
         )
         
+        print(img)
         # Identify red pixels based on the specified condition
         red_pixels <- mosaic[, , 1] * 255 > 50 &
           mosaic[, , 1] > 2 * mosaic[, , 2] & mosaic[, , 1] > 2 * mosaic[, , 3]
@@ -364,7 +355,6 @@ analyze_features <- function(drive_name, project_name,
           tr
         )
         
-        print(map$metadata)
       }
       
       # Check if 'feature_id' exists in 'map$metadata'
@@ -377,8 +367,7 @@ analyze_features <- function(drive_name, project_name,
       if (particle_id_strategy == "collapse") {
         # need to def features and then collapse spec?
         # map <- def_features(map)
-        print(map$metadata)
-        
+
         
         if (sum(map$metadata$feature_id != "-88" &
                 map$metadata$area > area_threshold) == 0)
@@ -615,7 +604,7 @@ analyze_features <- function(drive_name, project_name,
         image_raster[coords] <- "#00FF00"
         
         png(
-          paste0(wd, "/overlay_", file_names[file], ".png"),
+          paste0(wd, "/overlay_", file_names, ".png"),
           height = nrow(image_raster),
           width = ncol(image_raster)
         )
@@ -635,9 +624,9 @@ analyze_features <- function(drive_name, project_name,
           title = "All Particles"
         )
         ggsave(
-          filename = paste0("particle_image_", file_names[file], ".png"),
-          plot = plot,
+          filename = paste0("particle_image_", file_names, ".png"),
           path = wd,
+          plot = plot,
           width = width,
           height = height,
           units = units
@@ -660,7 +649,7 @@ analyze_features <- function(drive_name, project_name,
             title = paste0(material, " Particles")
           )
           ggsave(
-            filename = paste0(material, "_particle_image_", file_names[file], ".png"),
+            filename = paste0(material, "_particle_image_", file_names, ".png"),
             plot = plot,
             path = wd,
             width = width,
@@ -701,7 +690,7 @@ analyze_features <- function(drive_name, project_name,
           theme(plot.title = element_text(size = 5))
         
         ggsave(
-          filename = paste0("median_spec_plot_", file_names[file], ".png"),
+          filename = paste0("median_spec_plot_", file_names, ".png"),
           plot = spectra_plot,
           path = wd,
           width = width,
@@ -738,7 +727,7 @@ analyze_features <- function(drive_name, project_name,
             facet_grid(rows = vars(feature_id)) +
             theme_bw(base_size = 5) +
             labs(
-              title = paste0("Example Spectra ", material, " in ", file_names[file]),
+              title = paste0("Example Spectra ", material, " in ", file_names),
               x = "Wavenumbers (1/cm)",
               y = "Absorbance (Min-Max Norm)"
             ) +
@@ -746,7 +735,7 @@ analyze_features <- function(drive_name, project_name,
             theme(plot.title = element_text(size = 5))
           
           ggsave(
-            filename = paste0(material, "_median_spec_plot_", file_names[file], ".png"),
+            filename = paste0(material, "_median_spec_plot_", file_names, ".png"),
             plot = spectra_plot,
             path = wd,
             width = width,
@@ -778,7 +767,7 @@ analyze_features <- function(drive_name, project_name,
               "confident",
               ifelse(max_cor_val < 0.3, "undetermined", "possible")
             ),
-            sample_id = file_names[file]
+            sample_id = file_names
           ) %>%
           mutate(
             aspect_ratio = feret_max / feret_min,
@@ -831,9 +820,8 @@ analyze_features <- function(drive_name, project_name,
             centroid_y = centroid_y,
             centroid_x = centroid_x
           )
-        print(particle_info)
         fwrite(particle_info,
-               paste0(wd, "/particle_details_", file_names[file], ".csv"))
+               paste0(wd, "/particle_details_", file_names, ".csv"))
         
       }
       
@@ -843,24 +831,21 @@ analyze_features <- function(drive_name, project_name,
           rename(particle_id = feature_id) %>%
           group_by(material_class) %>%
           summarise(count = n()) %>%
-          mutate(sample_id = file_names[file])
+          mutate(sample_id = file_names)
         
         fwrite(particle_summary,
-               paste0(wd, "/particle_summary_", file_names[file], ".csv"))
-        print(particle_summary)
-        print(proc_map)
-        
-        proc_map
+               paste0(wd, "/particle_summary_", file_names, ".csv"))
+
       }
       
       #Save the raw spectra
       if ("spectra_raw" %in% types) {
-        saveRDS(map, file = paste0(wd, "/particles_raw_", file_names[file], ".rds"))
+        saveRDS(map, file = paste0(wd, "/particles_raw_", file_names, ".rds"))
       }
       
       #Save the processed spectra
       if ("spectra_processed" %in% types) {
-        saveRDS(proc_map, file = paste0(wd, "/particles_", file_names[file], ".rds"))
+        saveRDS(proc_map, file = paste0(wd, "/particles_", file_names, ".rds"))
       }
       
       #Save the median spectra as a csv
@@ -874,18 +859,17 @@ analyze_features <- function(drive_name, project_name,
           ) %>%
           inner_join(metadata_to_use %>% dplyr::select(feature_id, material_class),
                      by = "feature_id") %>%
-          mutate(sample_id = file_names[file])
+          mutate(sample_id = file_names)
         
         fwrite(spectra_sample,
-               paste0(wd, "/median_spec_", file_names[file], ".csv"))
+               paste0(wd, "/median_spec_", file_names, ".csv"))
       }
       #Print the final run time.
       time_diff = Sys.time() - time_start
       if ("time" %in% types) {
-        saveRDS(time_diff, file = paste0(wd, "/time_", file_names[file], ".rds"))
+        saveRDS(time_diff, file = paste0(wd, "/time_", file_names, ".rds"))
       }
-      print(time_diff)
-    
+
    
   }
   #After all samples are finished, concatenate the summary, details, ann spectra csv tables.
@@ -903,31 +887,31 @@ analyze_features <- function(drive_name, project_name,
     ), fill = T),
     paste0(wd, "/particle_summary_all.csv"))
   }
-  if ("particle_details" %in% types & "all" %in% by) {
-    if (file.exists(paste0(wd, "/particle_details_all.csv")))
-      file.remove(paste0(wd, "/particle_details_all.csv"))
-    
-    fwrite(rbindlist(lapply(
-      list.files(
-        path = wd,
-        pattern = "^particle_details.*\\.csv$",
-        full.names = T
-      ),
-      fread
-    ), fill = T),
-    paste0(wd, "/particle_details_all.csv"))
-  }
+  # if ("particle_details" %in% types & "all" %in% by) {
+  #   if (file.exists(paste0(wd, "/particle_details_all.csv")))
+  #     file.remove(paste0(wd, "/particle_details_all.csv"))
+  #   
+  #   fwrite(rbindlist(lapply(
+  #     list.files(
+  #       path = wd,
+  #       pattern = "^particle_details.*\\.csv$",
+  #       full.names = T
+  #     ),
+  #     fread
+  #   ), fill = T),
+  #   paste0(wd, "/particle_details_all.csv"))
+  # }
   
-  if ("median_spec" %in% types & "all" %in% by) {
-    fwrite(rbindlist(lapply(
-      list.files(
-        path = wd,
-        pattern = "^median_spec.*\\.csv$",
-        full.names = T
-      ),
-      fread
-    ), fill = T),
-    paste0(wd, "/median_spec_all.csv"))
-  }
+  # if ("median_spec" %in% types & "all" %in% by) {
+  #   fwrite(rbindlist(lapply(
+  #     list.files(
+  #       path = wd,
+  #       pattern = "^median_spec.*\\.csv$",
+  #       full.names = T
+  #     ),
+  #     fread
+  #   ), fill = T),
+  #   paste0(wd, "/median_spec_all.csv"))
+  # }
   
-}
+  }
