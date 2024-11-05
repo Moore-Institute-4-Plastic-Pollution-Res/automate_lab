@@ -62,10 +62,27 @@ analyze_features <- function(project_name,
   
   # Look through every file in the folders Spectra & Mosaic Image
   for (folder in folders_of_interest) {
-    
+    print(folder)
     #Get all drive file names
-    data_search <- drive_get(id = "1ha1741OqN4HDjZ7wN_kJvBkDvY-xY3o-") %>% 
-      drive_ls(folder) %>% 
+#     data_search <- drive_get(id ="1jIN0Hkzb-bdTwhn9NfiDDlOHiJ7pkOgY") %>%
+#       drive_ls(folder) %>%
+#       drive_ls()
+# # 
+#     data_search <- shared_drive_find("Project") |>
+#       drive_ls("Customer Projects") |>
+#       drive_ls(name %in% project_name) |>
+#       drive_ls("SFEI_01") |>
+#       drive_ls("iN10 Data") |>
+#       drive_ls("Additional_Files") |>
+#       drive_ls(folder) |>
+#       drive_ls()
+#         
+    #Get all drive file names
+    data_search <- shared_drive_find("Project") |>
+      drive_ls("Customer Projects") |>
+      drive_ls(project_name) |>
+      drive_ls(paste0(project_name, "_Analysis")) |>
+      drive_ls(folder) |>
       drive_ls()
     
     data_all <- bind_rows(data_all, data_search)
@@ -504,8 +521,7 @@ analyze_features <- function(project_name,
             dplyr::select(sample_name, material_class),
           by = c("max_cor_name" = "sample_name")
         )
-        
-        
+
       }
       #If using all cell id set the thresholds and identify the features.
       if (particle_id_strategy == "all cell id") {
@@ -938,17 +954,28 @@ analyze_features <- function(project_name,
   }
   # Export files ----
   # Find id of Project folder
-  folder_id <- shared_drive_find("Project") |> 
-    drive_ls("Customer Projects") |> 
-    drive_ls() |> 
-    filter(name == project_name) |> 
+  folder_id <- shared_drive_find("Project") |>
+    drive_ls("Customer Projects") |>
+    drive_ls() |>
+    filter(name == project_name) |>
+    drive_ls(paste0(project_name, "_Analysis")) |>
     pull(id)
-  
+
+  # Create new folder
   new_folder <- drive_mkdir("Spectra_Results",
                             path = as_id(folder_id),
                             overwrite = TRUE
                             )
-  
-  # Upload files 
-  
+  # Upload files
+  # Send data up to drive
+  data_upload <- list.files(wd)
+
+  for (file in data_upload){
+
+    drive_upload(media = file.path(wd, file),
+                 path = as_id(as.character(new_folder$id))
+    )
+
+  }
+
   }
