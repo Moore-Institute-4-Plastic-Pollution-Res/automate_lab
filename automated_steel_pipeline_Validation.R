@@ -133,15 +133,14 @@ wd <- file.path(project_name, "Spectral_Results")
 
 start = Sys.time()
 
-analyze_features(drive_name = "Projects", 
-                     project_name = project_name,
+analyze_features(project_name = project_name,
                      folders_of_interest = folders_of_interest,
                      lib = lib,
                      #img = img,#"C:\\Users\\winco\\OneDrive\\Documents\\Positive_Controls\\Mosaic Image files\\Recovery_red_beads_75-90um_5um-screen.JPG",
                      #bottom_left = list(c(171, 472)),
                      #top_right = list(c(632, 10)),
                      #origins = NULL, 
-                     spectral_smooth = F, 
+                     spectral_smooth = T, 
                      #sigma1 = c(0.001,2),
                      #sigma2 = c(0.001,2),
                      #spatial_smooth = ,
@@ -176,11 +175,24 @@ analyze_features(drive_name = "Projects",
                      height = 1000, 
                      units = "px")
 
+# Send data up to drive
+data_upload <- list.files("SFEI/Spectral_Results/")
+
+for (file in data_upload){
+
+drive_upload(media = file.path("SFEI/Spectral_Results", file),
+             path = as_id("1sOkyhzzSOXCwsrNGiTccaBQmLPkPKiYv")
+             )
+
+}
+
+file.path("SFEI/Spectral_Results", data_upload[1])
+
 
 end.time <- Sys.time()
-time.taken <- end.time - start.time
+time.taken <- end.time - start
 
-
+end.time - start
 
     # All study figures ----
     study_results <- fread(paste0(wd, "/particle_details_all.csv")) %>%

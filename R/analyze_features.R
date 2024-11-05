@@ -1,5 +1,5 @@
 # Download data 
-analyze_features <- function(drive_name, project_name,
+analyze_features <- function(project_name,
                              folders_of_interest,
                              bottom_left = NULL,
                              top_right = NULL,
@@ -64,10 +64,8 @@ analyze_features <- function(drive_name, project_name,
   for (folder in folders_of_interest) {
     
     #Get all drive file names
-    data_search <- shared_drive_find("Project") |>
-      drive_ls("Customer Projects") |>
-      drive_ls(project_name) |>
-      drive_ls(folder) |>
+    data_search <- drive_get(id = "1ha1741OqN4HDjZ7wN_kJvBkDvY-xY3o-") %>% 
+      drive_ls(folder) %>% 
       drive_ls()
     
     data_all <- bind_rows(data_all, data_search)
