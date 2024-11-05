@@ -17,6 +17,7 @@ walk(list.files(path = "R", pattern = "\\.R$", full.names = TRUE), source)
 # check if it has been installed or not 
 get_lib(c("mediod", "derivative"))
 
+
 #------------------- Google Drive File Download ------------------------------
 # Authorize Google Drive Connection 
 drive_auth(cache = ".secrets/")
@@ -26,9 +27,6 @@ project_name <- readline(prompt = "Enter the Name of the Google Drive Folder for
 
 # Access ID of all files in each folder --------------------------------------
 folders_of_interest <- c("Mosaic_Images", "Export_Files")
-
-# Create folders to store data any project  name
-
 
 # ----------------------------- Functions ---------------------------------
 particle_image <- function(proc_map_metadata, map_metadata, material_class, pixel_length = 25, origin, title){
@@ -76,7 +74,7 @@ walk(list.files(path = "R", pattern = "\\.R$", full.names = TRUE), source)
 #"C:/Users/winco/OneDrive/Documents/Positive_Controls" controls to fine tune
 #If finding poor id accuracy, can try removing other plastic from filter to see if the material is a known novel type.
 #path = "C:\\Users\\winco\\OneDrive\\Documents\\OpenSpecy_offline", 
-lib <- OpenSpecy::load_lib(type = "derivative") 
+lib <- read_any("Libraries/derivative.rds")
 lib <- filter_spec(lib, 
                    #!lib$metadata$material_class %in% c("other plastic", 
                     #                                   "other material"#, 
@@ -178,19 +176,27 @@ analyze_features(project_name = project_name,
 # Send data up to drive
 data_upload <- list.files("SFEI/Spectral_Results/")
 
-for (file in data_upload){
 
-drive_upload(media = file.path("SFEI/Spectral_Results", file),
-             path = as_id("1sOkyhzzSOXCwsrNGiTccaBQmLPkPKiYv")
-             )
+new_folder <- drive_mkdir("Spectra_Results",
+                          path = as_id("1jIN0Hkzb-bdTwhn9NfiDDlOHiJ7pkOgY"),
+                          overwrite = TRUE
+                          )
 
+for (file in data_upload) {
+  drive_upload(media = file.path(wd, file), path = as_id(as.character(new_folder$id)))
+  
 }
 
 file.path("SFEI/Spectral_Results", data_upload[1])
 
 
+
+
+
 end.time <- Sys.time()
 time.taken <- end.time - start
+
+wd <- getwd()
 
 end.time - start
 
