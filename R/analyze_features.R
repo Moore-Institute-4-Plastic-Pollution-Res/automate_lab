@@ -50,8 +50,8 @@ analyze_features <- function(project_name,
   if(!dir.exists(file.path(project_name))){
     dir.create(file.path(project_name))
   }
-  if(!dir.exists(file.path(project_name, "Spectra_Results"))){
-    dir.create(file.path(project_name, "Spectra_Results"))
+  if(!dir.exists(file.path(project_name, "Spectral_Results"))){
+    dir.create(file.path(project_name, "Spectral_Results"))
   }
 
   # Set base directory of files downloaded and analyzed
@@ -64,10 +64,10 @@ analyze_features <- function(project_name,
   for (folder in folders_of_interest) {
     print(folder)
     #Get all drive file names
-#     data_search <- drive_get(id ="1jIN0Hkzb-bdTwhn9NfiDDlOHiJ7pkOgY") %>%
+#     data_search <- drive_get(id ="") %>%
 #       drive_ls(folder) %>%
 #       drive_ls()
-# # 
+# #
 #     data_search <- shared_drive_find("Project") |>
 #       drive_ls("Customer Projects") |>
 #       drive_ls(name %in% project_name) |>
@@ -77,28 +77,38 @@ analyze_features <- function(project_name,
 #       drive_ls(folder) |>
 #       drive_ls()
 #         
-    #Get all drive file names
-    data_search <- shared_drive_find("Project") |>
-      drive_ls("Customer Projects") |>
-      drive_ls(project_name) |>
-      drive_ls(paste0(project_name, "_Analysis")) |>
-      drive_ls(folder) |>
-      drive_ls()
+    # #Get all drive file names
+    # data_search <- shared_drive_find("Project") |>
+    #   drive_ls("Customer Projects") |>
+    #   drive_ls(project_name) |>
+    #   drive_ls(paste0(project_name, "_Analysis")) |>
+    #   drive_ls(folder) |>
+    #   drive_ls()
     
+    data_search <- shared_drive_find("Project") |> 
+      drive_ls("Customer Projects") |> 
+      drive_ls() |> 
+      filter(name %in% project_name) |> 
+      drive_ls(folder) |> 
+      drive_ls()
+
     data_all <- bind_rows(data_all, data_search)
   }
   # Delimit file names to group
   data_temp <- data_all |> 
-    separate(col = name, into = c("name", "file"), sep = "[.]")
+    mutate(temp_name = name) |> 
+    separate(col = temp_name, into = c("name_new", "file"), sep = "[.]") |> 
+    distinct(name, .keep_all = TRUE)
   
+  unique(data_temp$name_new)
   # Group files by name, download, and do analysis
-  for (unique_names in unique(data_temp$name)){
+  for (unique_names in unique(data_temp$name_new)){
     
-    matching_files <- data_all |> 
-      filter(grepl(unique_names, name))
+      matching_files <- data_temp |> 
+        filter(name_new %in% unique_names)
     # Here is where we check if all the necessary files are available 
     # without downloading based on matching files
-    
+      
     # Check if they are present
     hdr_present <- any(grepl(".hdr$", matching_files$name))
     dat_present <- any(grepl(".dat$", matching_files$name))
@@ -128,7 +138,7 @@ analyze_features <- function(project_name,
           next
         })
       }
-    
+
     # Read in spectra from Raw Data folder (base_dir)
     file <- list.files(path = base_dir,
                        pattern = "(\\.dat$)|(\\.img$)",
@@ -148,7 +158,7 @@ analyze_features <- function(project_name,
     #Begins timer
     time_start = Sys.time()
     
-    
+ 
     #Variable input tests ----
     if(!all(particle_id_strategy %in% c("collapse", "all cell id", "particle cell vote"))) stop("Incorrect particle_id_strategy")
     # if(!all(is.character(data_all))) stop("Incorrect files")
@@ -183,6 +193,7 @@ analyze_features <- function(project_name,
     if(!all(is.numeric(width))) stop("Incorrect width")
     if(!all(is.numeric(height))) stop("Incorrect height")
     if(!all(is.character(units))) stop("Incorrect units")
+    
     
       #Read in the file ---- should be instead set to the file path and list the spectra_files 
     if (grepl(".dat", file)) {
@@ -909,8 +920,6 @@ analyze_features <- function(project_name,
         saveRDS(time_diff, file = paste0(wd, "/time_", file_names, ".rds"))
       }
 
-   
-  }
   #After all samples are finished, concatenate the summary, details, ann spectra csv tables.
   if ("particle_summary" %in% types & "all" %in% by) {
     if (file.exists(paste0(wd, "/particle_summary_all.csv")))
@@ -952,30 +961,30 @@ analyze_features <- function(project_name,
     ), fill = T),
     paste0(wd, "/median_spec_all.csv"))
   }
-  # Export files ----
-  # Find id of Project folder
-  folder_id <- shared_drive_find("Project") |>
-    drive_ls("Customer Projects") |>
-    drive_ls() |>
-    filter(name == project_name) |>
-    drive_ls(paste0(project_name, "_Analysis")) |>
-    pull(id)
-
-  # Create new folder
-  new_folder <- drive_mkdir("Spectra_Results",
-                            path = as_id(folder_id),
-                            overwrite = TRUE
-                            )
-  # Upload files
-  # Send data up to drive
-  data_upload <- list.files(wd)
-
-  for (file in data_upload){
-
-    drive_upload(media = file.path(wd, file),
-                 path = as_id(as.character(new_folder$id))
-    )
-
+  # # # Export files ----
+  # # Find id of Project folder
+  # folder_id <- shared_drive_find("Project") |>
+  #   drive_ls("Customer Projects") |>
+  #   drive_ls() |>
+  #   filter(name == project_name) |>
+  #   drive_ls(paste0(project_name, "_Analysis")) |>
+  #   pull(id)
+  # 
+  # # Create new folder
+  # new_folder <- drive_mkdir("Spectral_Results",
+  #                           path = as_id(folder_id),
+  #                           overwrite = TRUE
+  #                           )
+  # # Upload files
+  # # Send data up to drive
+  # data_upload <- list.files(wd)
+  # 
+  # for (file in data_upload){
+  # 
+  #   drive_upload(media = file.path(wd, file),
+  #                path = as_id(as.character(new_folder$id))
+  #   )
+  # 
+  # }
   }
-
-  }
+}

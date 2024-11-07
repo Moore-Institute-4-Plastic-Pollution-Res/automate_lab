@@ -13,10 +13,6 @@ library(purrr)
 # Load all R scripts in the folder
 walk(list.files(path = "R", pattern = "\\.R$", full.names = TRUE), source)
 
-#Run once
-# check if it has been installed or not 
-get_lib(c("mediod", "derivative"))
-
 
 #------------------- Google Drive File Download ------------------------------
 # Authorize Google Drive Connection 
@@ -26,8 +22,9 @@ drive_auth(cache = ".secrets/")
 project_name <- readline(prompt = "Enter the Name of the Google Drive Folder for this Project: ")
 
 # Access ID of all files in each folder --------------------------------------
-folders_of_interest <- c("Mosaic_Images", "Export_Files")
+folders_of_interest <- c("Export_Files")
 
+folder <- "Export_Files"
 # ----------------------------- Functions ---------------------------------
 particle_image <- function(proc_map_metadata, map_metadata, material_class, pixel_length = 25, origin, title){
     ggplot(data = proc_map_metadata, aes(x = centroid_x*pixel_length + origin[1], y = centroid_y*pixel_length + origin[2], label = feature_id)) +
@@ -67,21 +64,8 @@ determine_thresholds <- function(x, features, test_values, true_count){
 ########### -----------------------------------
 walk(list.files(path = "R", pattern = "\\.R$", full.names = TRUE), source)
 
-
-
-#Spectral Library ----
-#get_lib("derivative") #Run your first time. 
-#"C:/Users/winco/OneDrive/Documents/Positive_Controls" controls to fine tune
-#If finding poor id accuracy, can try removing other plastic from filter to see if the material is a known novel type.
-#path = "C:\\Users\\winco\\OneDrive\\Documents\\OpenSpecy_offline", 
-lib <- read_any("Libraries/derivative.rds")
-lib <- filter_spec(lib, 
-                   #!lib$metadata$material_class %in% c("other plastic", 
-                    #                                   "other material"#, 
-                    #                                   #"mineral", 
-                                                       #"organic matter"
-                     #                                  ) & 
-                       lib$metadata$spectrum_type == "ftir") #This improves accuracy 10%
+lib <- read_any("Library/derivative.rds")
+lib <- filter_spec(lib, lib$metadata$spectrum_type == "ftir") #This improves accuracy 10%
 
 # Material metadata rename and group similar material class
 lib$metadata <- lib$metadata %>%
@@ -173,28 +157,22 @@ analyze_features(project_name = project_name,
                      height = 1000, 
                      units = "px")
 
-# Send data up to drive
-data_upload <- list.files("SFEI/Spectral_Results/")
+end.time <- Sys.time()
+time.taken <- end.time - start
 
 
-new_folder <- drive_mkdir("Spectra_Results",
-                          path = as_id("1jIN0Hkzb-bdTwhn9NfiDDlOHiJ7pkOgY"),
-                          overwrite = TRUE
-                          )
+# Upload_files
+data_upload <- list.files(wd)
 
-for (file in data_upload) {
-  drive_upload(media = file.path(wd, file), path = as_id(as.character(new_folder$id)))
+for (file in data_upload){
+  
+  drive_upload(media = file.path(wd, file),
+               path = as_id(as.character(new_folder$id))
+  )
   
 }
 
-file.path("SFEI/Spectral_Results", data_upload[1])
 
-
-
-
-
-end.time <- Sys.time()
-time.taken <- end.time - start
 
 wd <- getwd()
 
