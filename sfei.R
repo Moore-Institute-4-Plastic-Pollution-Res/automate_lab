@@ -7,8 +7,6 @@ lib <- read_any("Library/derivative.rds")
 
 lib <- filter_spec(lib, lib$metadata$spectrum_type == "ftir")
 
-
-
 # Find files to download
 data_search <- shared_drive_find("Project") |> 
   drive_ls("Customer Projects") |> 
@@ -67,12 +65,19 @@ for (folder in 1:nrow(data_search)) {
     # for each folder conduct the analysis
     individual_spec <- list.files(folder_placement, full.names = T)
     
-    indiv_files <- read_any(individual_spec) |> 
-      c_spec("common") |> 
-      process_spec(conform_spec_args = list(range = lib$wavenumber, 
-                                            res = NULL, 
-                                            type = "interp"),
-                   flatten_range = T
+    indiv_files <- read_any(individual_spec) |>
+      c_spec("common") |>
+      # 800 - 3800
+      process_spec(
+        restrict_range = TRUE,
+        restrict_range_args = list(min = 800, max = 3800),
+        conform_spec_args =
+          list(
+            range = lib$wavenumber,
+            res = NULL,
+            type = "interp"
+          ),
+        flatten_range = T
       )
     
     top_matches <- match_spec(x = indiv_files, 
@@ -100,7 +105,7 @@ df <- list.files(path = "SFEI/Results/", full.names = T) |>
   bind_rows()
 
 df <- df |> 
-  #rename(file_name = file_name.y) |> 
+  rename(file_name = file_name.y) |> 
   mutate(sample = sub(".*_(S\\d{2})_.*", "\\1", file_name)) |> 
   select(sample,file_name,match_val,material_class,spectrum_identity,library_id)
 
@@ -121,7 +126,7 @@ new_folder <- drive_mkdir("Single_Particle_Results",
 
 
 
-  drive_upload(media = "plastic_df.csv",
+    drive_upload(media = "plastic_df.csv",
              path = as_id(as.character(new_folder$id)))
 
 
