@@ -1,3 +1,17 @@
+library(OpenSpecy)
+library(ggplot2)
+library(ggrepel)
+library(dplyr)
+library(tidyr)
+library(data.table)
+library(mmand)
+library(magick)
+library(cluster)
+library(googledrive)
+library(purrr)
+library(readr)
+
+
 # spa files - individual files to run for SFEI
 # Ask User the name of the folder they want to access
 project_name <- readline(prompt = "Enter the Name of the Google Drive Folder for this Project: ")
@@ -117,6 +131,7 @@ just_plastics <- df |>
 
 write.csv(just_plastics, "plastic_df.csv")
 
+
  # Upload results
 # Create new folder
 new_folder <- drive_mkdir("Single_Particle_Results",
@@ -126,7 +141,7 @@ new_folder <- drive_mkdir("Single_Particle_Results",
 
 
 
-    drive_upload(media = "plastic_df.csv",
-             path = as_id(as.character(new_folder$id)))
+
+drive_upload(media = "plastic_df.csv", path = as_id(as.character(new_folder$id)))
 
 
