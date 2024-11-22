@@ -11,7 +11,6 @@ library(googledrive)
 library(purrr)
 library(readr)
 
-
 # spa files - individual files to run for SFEI
 # Ask User the name of the folder they want to access
 project_name <- readline(prompt = "Enter the Name of the Google Drive Folder for this Project: ")
@@ -32,35 +31,64 @@ data_search <- shared_drive_find("Project") |>
   filter(name == "iS50 Spectra") |> 
   drive_ls() |> 
   filter(name == "Spectra") |> 
-  drive_ls()
+  drive_ls() |> 
+  filter(grepl("\\.(spa)|(csv)|(jdx)|(dx)|([0-9])$", name, ignore.case = T))
 
 # Found the correct folder path - now create a function that conducts the analysis for each folder that starts with SFEI
 
 #Set a folder to save data locally
-folder_placement <- file.path(project_name, "Raw", fsep = "/")
+local_store <- file.path("data",project_name)
+local_store_raw <- file.path("data", project_name, "Raw", fsep = "/")
+local_store_results <- file.path("data", project_name, "Results", fsep = "/")
 
 # Create folders ----
-if(!dir.exists(file.path(project_name))){
-  dir.create(file.path(project_name))
-  dir.create(file.path(project_name, "Raw", fsep = "/"))
-  dir.create(file.path(project_name, "Results", fsep = "/"))
+
+if(!dir.exists(local_store)){
+  dir.create(local_store)
+}
+if(!dir.exists(local_store_raw)){
+  dir.create(local_store_raw)
+}
+if(!dir.exists(local_store_results)){
+  dir.create(local_store_results)
 }
 
+#Remove files already downloaded
+data_search_to_download <- data_search |>
+  filter(!name %in% list.files(local_store_raw))
+
 # Download files
-for (file in 1:nrow(data_search)) {
+for (file in 1:nrow(data_search_to_download)) {
   # files in each specific folder
-  file_named <- data_search$name[file]
+  file_named <- data_search_to_download$name[file]
   
-  dest_path <- file.path(folder_placement,file_named, fsep = "/")
+  dest_path <- file.path(local_store_raw,file_named, fsep = "/")
   tryCatch({
-    drive_download(as_id(data_search[file, ]$id), path = dest_path,overwrite = TRUE)
+    drive_download(as_id(data_search_to_download[file, ]$id), path = dest_path,overwrite = TRUE)
   }, error = function(e) {
-    message("Error downloading file: ", file_name, "\n", e)
+    message("Error downloading file: ", file_named, "\n", e)
   }) #Add a check at the end that 
 }
 
 # for each folder conduct the analysis"
-individual_spec <- list.files(file.path(project_name, "Raw", fsep = "/"), full.names = T, recursive = T)
+individual_spec <- list.files(local_store_raw, full.names = T, recursive = T)
+
+# Delete files that aren't in drive
+# Loop through all files in the folder
+for (file in individual_spec) {
+  # Extract the file name from the full path
+  file_name <- basename(file)
+  
+  # Check if the file is not in the list of names to keep
+  if (!(file_name %in% data_search$name)) {
+    # Delete the file
+    file.remove(file)
+    # Print a message
+    print(paste0("Unmatched files deleted.\n", file))
+  }
+}
+
+individual_spec <- list.files(local_store_raw, full.names = T, recursive = T)
 
 indiv_files <- read_any(individual_spec) |>
   c_spec("common") |>
@@ -89,9 +117,7 @@ top_matches <- match_spec(x = indiv_files,
 
 write.csv(
   top_matches,
-  file = file.path(
-    project_name,
-    "Results",
+  file = file.path(local_store_results,
     "full_particle_results.csv"
   ),
   row.names = F
@@ -103,9 +129,7 @@ just_plastics <- top_matches |>
 
 write.csv(
   just_plastics,
-  file = file.path(
-    project_name,
-    "Results",
+  file = file.path(local_store_results,
     "plastic_df.csv"
   ),
   row.names = F
@@ -130,15 +154,11 @@ new_folder <- drive_mkdir("Single_Particle_Results",
                           overwrite = TRUE
 )
 
-drive_upload(media = file.path(
-  project_name,
-  "Results",
+drive_upload(media = file.path(local_store_results,
   "plastic_df.csv"
 ), path = as_id(as.character(new_folder$id)))
 
 
-drive_upload(media = file.path(
-  project_name,
-  "Results",
+drive_upload(media = file.path(local_store_results,
   "full_particle_results.csv"
 ), path = as_id(as.character(new_folder$id)))
