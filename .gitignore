@@ -1,6 +1,8 @@
 # History files
 .Rhistory
 .Rapp.history
+.DS_Store
+.venv/
 # Session Data files
 .RData
 .RDataTmp
@@ -35,3 +37,4 @@ po/*~
 rsconnect/
 .secrets/
 data/
+www/

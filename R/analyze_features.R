@@ -1,6 +1,6 @@
 # Download data 
 analyze_features <- function(project_name,
-                             folders_of_interest,
+                             folder = "Export_Files",
                              bottom_left = NULL,
                              top_right = NULL,
                              lib,
@@ -61,8 +61,6 @@ analyze_features <- function(project_name,
   data_all <- as_dribble()
   
   # Look through every file in the folders Spectra & Mosaic Image
-  for (folder in folders_of_interest) {
-    print(folder)
     #Get all drive file names
 #     data_search <- drive_get(id ="") %>%
 #       drive_ls(folder) %>%
@@ -92,10 +90,10 @@ analyze_features <- function(project_name,
       drive_ls(folder) |> 
       drive_ls()
 
-    data_all <- bind_rows(data_all, data_search)
-  }
+    #data_all <- bind_rows(data_all, data_search)
+
   # Delimit file names to group
-  data_temp <- data_all |> 
+  data_temp <- data_search |> 
     mutate(temp_name = name) |> 
     separate(col = temp_name, into = c("name_new", "file"), sep = "[.]") |> 
     distinct(name, .keep_all = TRUE)
