@@ -6,6 +6,23 @@ library(magick)
 library(cluster)
 library(googledrive)
 
+
+#Set a folder to save data locally ---
+local_store <- file.path("data",project_name)
+local_store_results <- file.path("data", project_name, "Results", fsep = "/")
+# Set base directory of files downloaded and analyzed
+base_dir <- file.path("data",project_name, "Raw_Data")
+
+
+
+# Create folders ----
+if(!dir.exists(local_store)){
+  dir.create(local_store, recursive = TRUE)
+}
+if(!dir.exists(local_store_results)){
+  dir.create(local_store_results, recursive = TRUE)
+}
+
 # Download data 
 analyze_features <- function(project_name,
                              folder = "Export_Files",
@@ -31,7 +48,7 @@ analyze_features <- function(project_name,
                              abs = F,
                              k = 1,
                              k_weighting = "mean",
-                             wd,
+                             wd = local_store_results,
                              particle_id_strategy = "collapse",
                              vote_count = Inf,
                              collapse_function = median,
@@ -53,44 +70,7 @@ analyze_features <- function(project_name,
                              units = "px"
 ) {
   
-  
-  # Create folders ----
-  if(!dir.exists(file.path(project_name))){
-    dir.create(file.path(project_name))
-  }
-  if(!dir.exists(file.path(project_name, "Spectral_Results"))){
-    dir.create(file.path(project_name, "Spectral_Results"))
-  }
-  
-  # Set base directory of files downloaded and analyzed
-  base_dir <- file.path(project_name, "Raw_Data")
-  
-  # Set blank data frame
-  data_all <- as_dribble()
-  
-  # Look through every file in the folders Spectra & Mosaic Image
-  #Get all drive file names
-  #     data_search <- drive_get(id ="") %>%
-  #       drive_ls(folder) %>%
-  #       drive_ls()
-  # #
-  #     data_search <- shared_drive_find("Project") |>
-  #       drive_ls("Customer Projects") |>
-  #       drive_ls(name %in% project_name) |>
-  #       drive_ls("SFEI_01") |>
-  #       drive_ls("iN10 Data") |>
-  #       drive_ls("Additional_Files") |>
-  #       drive_ls(folder) |>
-  #       drive_ls()
-  #         
-  # #Get all drive file names
-  # data_search <- shared_drive_find("Project") |>
-  #   drive_ls("Customer Projects") |>
-  #   drive_ls(project_name) |>
-  #   drive_ls(paste0(project_name, "_Analysis")) |>
-  #   drive_ls(folder) |>
-  #   drive_ls()
-  
+  # Find spectra files
   data_search <- shared_drive_find("Project") |> 
     drive_ls("Customer Projects") |> 
     drive_ls() |> 
@@ -98,15 +78,15 @@ analyze_features <- function(project_name,
     drive_ls(folder) |> 
     drive_ls()
   
-  #data_all <- bind_rows(data_all, data_search)
-  
   # Delimit file names to group
   data_temp <- data_search |> 
     mutate(temp_name = name) |> 
     separate(col = temp_name, into = c("name_new", "file"), sep = "[.]") |> 
     distinct(name, .keep_all = TRUE)
   
+  # Identify the unique sample names
   unique(data_temp$name_new)
+  
   # Group files by name, download, and do analysis
   for (unique_names in unique(data_temp$name_new)){
     
@@ -126,7 +106,7 @@ analyze_features <- function(project_name,
           if(!hdr_present) "missing .hdr file.\n",
           if(!dat_present) "missing .dat file.\n",
           if(!img_present) "missing image file (.JPG).\n")
-      next
+      stop()
     }
     
     # Create temp file 
@@ -141,11 +121,11 @@ analyze_features <- function(project_name,
         drive_download(matching_files[file, ], path = file.path(base_dir, matching_files$name[file]), overwrite = TRUE)
       }, error = function(e) {
         message("Error downloading file: ", matching_files$name[file], "\n", e)
-        next
+        stop()
       })
     }
     
-    # Read in spectra from Raw Data folder (base_dir)
+    # List spectra files from Raw Data folder (base_dir)
     file <- list.files(path = base_dir,
                        pattern = "(\\.dat$)|(\\.img$)",
                        full.names = T)
@@ -200,23 +180,18 @@ analyze_features <- function(project_name,
     if(!all(is.numeric(height))) stop("Incorrect height")
     if(!all(is.character(units))) stop("Incorrect units")
     
-    
-    #Read in the file ---- should be instead set to the file path and list the spectra_files 
+    #Read in the file ----  
     if (grepl(".dat", file)) {
       map <- read_envi(file, spectral_smooth = spectral_smooth, sigma = sigma1)
-      
     }
-    
     else{
       map <- read_any(file)
     }
-    
-    
+
     #Correct baseline if specified
     if (adj_map_baseline) {
       baseline <- median(as.matrix(map$spectra), na.rm = T)
       map$spectra <- map$spectra - baseline
-      
     }
     
     #extracts origins if available.
@@ -248,8 +223,7 @@ analyze_features <- function(project_name,
       abs = abs
     )
     
-    
-    #Create a heatmap of  the sig noise values
+    #Create a heatmap ----
     if ("particle_heatmap" %in% types) {
       plot <- ggplot() +
         geom_raster(
@@ -265,6 +239,7 @@ analyze_features <- function(project_name,
         labs(x = "X (um)", y = "Y (um)") +
         scale_fill_viridis_c()
       
+      # save heatmap
       ggsave(
         filename = paste0("particle_heatmap_", file_names, ".png"),
         path = wd,
@@ -281,7 +256,7 @@ analyze_features <- function(project_name,
     }
     
     
-    #Create a thresholded heatmap using the sig noise values and threshold
+    #Create a thresholded heatmap ----
     if ("particle_heatmap_thresholded" %in% types) {
       plot <- ggplot() +
         geom_raster(
@@ -371,7 +346,6 @@ analyze_features <- function(project_name,
       tr = top_right[[file]]
     }
     
-    
     #Identify every pixel and use that to identify the features.
     if (particle_id_strategy == "all cell id") {
       proc_map  <- process_spec(
@@ -394,11 +368,6 @@ analyze_features <- function(project_name,
       
       map$metadata$threshold <- map$metadata$snr > sn_threshold
       
-      map$metadata$snr
-      
-      map$metadata$threshold
-      unique(map$metadata$threshold)
-      
       map <- def_features(
         map,
         features = map$metadata$threshold,
@@ -411,7 +380,6 @@ analyze_features <- function(project_name,
         bl,
         tr
       )
-      
     }
     
     # Check if 'feature_id' exists in 'map$metadata'
@@ -419,12 +387,10 @@ analyze_features <- function(project_name,
       stop("feature_id column is missing in map$metadata")
     }
     
-    
     #Collapse the particles to their median. Remove -88 and areas with only 1 pixel. Process the spectra.
     if (particle_id_strategy == "collapse") {
       # need to def features and then collapse spec?
       # map <- def_features(map)
-      
       
       if (sum(map$metadata$feature_id != "-88" &
               map$metadata$area > area_threshold) == 0)
@@ -443,7 +409,6 @@ analyze_features <- function(project_name,
           }, res = NULL),
           restrict_range = T,
           restrict_range_args = list(min = c(800, 2420), max = c(2200, 3200))#)#, #Making comparable to lda and mediod),
-          
           
           #flatten_range = T #Improved ids by 7 %
         )
@@ -967,13 +932,14 @@ analyze_features <- function(project_name,
       ), fill = T),
       paste0(wd, "/median_spec_all.csv"))
     }
-    # # Export files ----
+    # Export files ----
     # Find id of Project folder
     folder_id <- shared_drive_find("Project") |>
       drive_ls("Customer Projects") |>
       drive_ls() |>
       filter(name == project_name) |>
-      drive_ls(paste0(project_name, "_Analysis")) |>
+      drive_ls() |> 
+      filter(name == "Export_Files") |> 
       pull(id)
 
     # Create new folder
@@ -1023,7 +989,7 @@ analyze_features(project_name = project_name,
                  collapse_function = median,
                  k = 1,
                  k_weighting = "mean", #or multiple
-                 wd = paste0(project_name,"/Spectral_Results"), #will put results here. 
+                 wd = local_store_results, #will put results here. 
                  types = c(
                    "particle_heatmap_thresholded",
                    "particle_heatmap", 

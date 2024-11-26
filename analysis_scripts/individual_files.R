@@ -16,6 +16,8 @@ lib <- load_lib("derivative") |>
 data_search <- shared_drive_find("Project") |> 
   drive_ls("Customer Projects") |> 
   drive_ls() |> 
+  filter(name %in% map(strsplit(project_name, split = "_"),1)) |> 
+  drive_ls() |> 
   filter(name %in% project_name) |> 
   drive_ls() |> 
   filter(name == "Particle_500um_Data") |> 
@@ -25,7 +27,6 @@ data_search <- shared_drive_find("Project") |>
   filter(name == "Spectra") |> 
   drive_ls() |> 
   filter(grepl("\\.(spa)|(csv)|(jdx)|(dx)|([0-9])$", name, ignore.case = T))
-
 # Found the correct folder path - now create a function that conducts the analysis for each folder that starts with SFEI
 
 #Set a folder to save data locally
@@ -36,13 +37,13 @@ local_store_results <- file.path("data", project_name, "Results", fsep = "/")
 # Create folders ----
 
 if(!dir.exists(local_store)){
-  dir.create(local_store)
+  dir.create(local_store, recursive = TRUE)
 }
 if(!dir.exists(local_store_raw)){
-  dir.create(local_store_raw)
+  dir.create(local_store_raw, recursive = TRUE)
 }
 if(!dir.exists(local_store_results)){
-  dir.create(local_store_results)
+  dir.create(local_store_results, recursive = TRUE)
 }
 
 #Remove files already downloaded
