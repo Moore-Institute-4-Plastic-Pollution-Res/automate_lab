@@ -11,8 +11,7 @@ library(googledrive)
 local_store <- file.path("data",project_name)
 local_store_results <- file.path("data", project_name, "Results", fsep = "/")
 # Set base directory of files downloaded and analyzed
-base_dir <- file.path("data",project_name, "Raw_Data")
-
+local_store_raw <- file.path("data", project_name, "Raw", fsep = "/")
 
 
 # Create folders ----
@@ -71,10 +70,19 @@ analyze_features <- function(project_name,
 ) {
   
   # Find spectra files
+  # data_search <- shared_drive_find("Project") |> 
+  #   drive_ls("Customer Projects") |> 
+  #   drive_ls() |> 
+  #   filter(name %in% project_name) |> 
+  #   drive_ls(folder) |> 
+  #   drive_ls()
+  
   data_search <- shared_drive_find("Project") |> 
     drive_ls("Customer Projects") |> 
     drive_ls() |> 
     filter(name %in% project_name) |> 
+    drive_ls("JHENG_270") |> 
+    drive_ls("JHENG270") |> 
     drive_ls(folder) |> 
     drive_ls()
   
@@ -110,27 +118,27 @@ analyze_features <- function(project_name,
     }
     
     # Create temp file 
-    if (dir.exists(base_dir)){
-      unlink(base_dir, recursive = TRUE)
+    if (dir.exists(local_store_raw)){
+      unlink(local_store_raw, recursive = TRUE)
     }
-    dir.create(base_dir, recursive = TRUE)
+    dir.create(local_store_raw, recursive = TRUE)
     
     # Download every file in the grouped matching file pairs ---
     for (file in 1:nrow(matching_files)) {
       tryCatch({
-        drive_download(matching_files[file, ], path = file.path(base_dir, matching_files$name[file]), overwrite = TRUE)
+        drive_download(matching_files[file, ], path = file.path(local_store_raw, matching_files$name[file]), overwrite = TRUE)
       }, error = function(e) {
         message("Error downloading file: ", matching_files$name[file], "\n", e)
         stop()
       })
     }
     
-    # List spectra files from Raw Data folder (base_dir)
-    file <- list.files(path = base_dir,
+    # List spectra files from Raw Data folder (local_store_raw)
+    file <- list.files(path = local_store_raw,
                        pattern = "(\\.dat$)|(\\.img$)",
                        full.names = T)
     
-    img <- list.files(path = base_dir,
+    img <- list.files(path = local_store_raw,
                       pattern = "(\\.JPG$)|(\\.jpg$)",
                       full.names = T)
     
@@ -934,36 +942,35 @@ analyze_features <- function(project_name,
     }
     # Export files ----
     # Find id of Project folder
-    folder_id <- shared_drive_find("Project") |>
-      drive_ls("Customer Projects") |>
-      drive_ls() |>
-      filter(name == project_name) |>
-      drive_ls() |> 
-      filter(name == "Export_Files") |> 
-      pull(id)
-
-    # Create new folder
-    new_folder <- drive_mkdir("Spectral_Results",
-                              path = as_id(folder_id),
-                              overwrite = TRUE
-                              )
-    # Upload files
-    # Send data up to drive
-    data_upload <- list.files(wd)
-
-    for (file in data_upload){
-
-      drive_upload(media = file.path(wd, file),
-                   path = as_id(as.character(new_folder$id))
-      )
-
-    }
+    # folder_id <- shared_drive_find("Project") |>
+    #   drive_ls("Customer Projects") |>
+    #   drive_ls() |>
+    #   filter(name == project_name) |>
+    #   drive_ls() |>
+    #   filter(name == "Export_Files") |>
+    #   pull(id)
+    # 
+    # # Create new folder
+    # new_folder <- drive_mkdir("Spectral_Results",
+    #                           path = as_id(folder_id),
+    #                           overwrite = TRUE
+    #                           )
+    # # Upload files
+    # # Send data up to drive
+    # data_upload <- list.files(wd)
+    # 
+    # for (file in data_upload){
+    # 
+    #   drive_upload(media = file.path(wd, file),
+    #                path = as_id(as.character(new_folder$id))
+    #   )
+    # 
+    # }
   }
 }
 
 # Run analysis ----
 analyze_features(project_name = project_name,
-                 folders_of_interest = folders_of_interest,
                  lib = lib,
                  #img = img,
                  #bottom_left = list(c(171, 472)),

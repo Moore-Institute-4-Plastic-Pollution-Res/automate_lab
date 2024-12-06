@@ -10,8 +10,10 @@ library(cluster)
 library(googledrive)
 library(purrr)
 
+
+
 # All study figures ----
-study_results <- fread(paste0(wd, "/particle_details_all.csv")) %>%
+study_results <- fread(paste0(local_store_results, "/particle_details_all.csv")) %>%
   mutate(sample_id = gsub("([0-9]{1}of[0-9]{1}_.*)|(_lft)|(_rt)", "", sample_id))
 
 #Crowding factor
@@ -93,19 +95,19 @@ for (n in 1:ncol(lib_check$spectra)) {
 #Compare with qa samples ----
 threshold = 0.66
 
-valid_results <- fread(paste0(wd, "/valid_results.csv")) %>%
+valid_results <- fread(paste0(local_store_results, "/valid_results.csv")) %>%
   mutate(sample_id = gsub("FLB", "LFB", sample_id)) %>%
   filter(!grepl("PrcdrlBlnk", sample_id))
 
 
-actual_results <- fread(paste0(wd, "/particle_details_all.csv")) %>%
+actual_results <- fread(paste0(local_store_results, "/particle_details_all.csv")) %>%
   mutate(sample_id = gsub("(_lft$)|(_rt$)", "", sample_id)) %>%
   #filter(max_cor_val >= threshold) %>% #Acceptable accuracy doing it like this too.
   filter(!grepl("(PrcdrlBlnk)|(dup)", sample_id)) %>%
   group_by(sample_id, material_class) %>%
   summarise(count = n(), area = sum(area_um2))
 
-raw_results_to_share <- fread(paste0(wd, "/particle_details_all.csv")) %>%
+raw_results_to_share <- fread(paste0(local_store_results, "/particle_details_all.csv")) %>%
   filter(!grepl("PrcdrlBlnk", sample_id)) %>%
   filter(!material_class %in% c("mineral", "organic matter", "unknown")) %>%
   rename(
@@ -139,7 +141,7 @@ raw_results_to_share <- fread(paste0(wd, "/particle_details_all.csv")) %>%
   )
 
 fwrite(raw_results_to_share,
-       paste0(wd, "\\", "raw_particle_results_to_share.csv"))
+       file.path(local_store_results, "raw_particle_results_to_share.csv"))
 
 joined <- left_join(valid_results,
                     actual_results,
@@ -206,7 +208,7 @@ recovery <- joined2 %>%
 #              rsd = sd(recovery_manual, na.rm = T)/mean(recovery_manual, na.rm = T) * 100)
 
 #MDA
-blank_results_raw <- fread(paste0(wd, "/particle_details_all.csv")) %>%
+blank_results_raw <- fread(paste0(local_store_results, "/particle_details_all.csv")) %>%
   filter(grepl("LRB", sample_id)) %>%
   #filter(max_cor_val >= threshold) %>% #Acceptable accuracy doing it like this too.
   mutate(sample_id = gsub("(lft)|(rt)|(a$)|(b$)", "", sample_id)) %>%
@@ -262,10 +264,10 @@ MDA <- blank_results_raw %>%
   summarise(MDA_FTIR = mean(count, na.rm = T) + 3 + 3.29 * sd(count, na.rm = T) *
               sqrt(1 + 1 / 4))
 
-fwrite(recovery, paste0(wd, "/recovery_results.csv"))
-fwrite(joined2, paste0(wd, "/analysis_results.csv"))
-fwrite(MDA, paste0(wd, "/mda_results.csv"))
-fwrite(blank_results_raw, paste0(wd, "/blank_results_raw.csv"))
+fwrite(recovery, paste0(local_store_results, "/recovery_results.csv"))
+fwrite(joined2, paste0(local_store_results, "/analysis_results.csv"))
+fwrite(MDA, paste0(local_store_results, "/mda_results.csv"))
+fwrite(blank_results_raw, paste0(local_store_results, "/blank_results_raw.csv"))
 
 #Test Accuracy of Routine ----
 #Benchmarks to beat
@@ -291,7 +293,7 @@ fwrite(blank_results_raw, paste0(wd, "/blank_results_raw.csv"))
 #           median_feret = median(Feret),
 #           count = n())
 
-#true_values <- fread(paste0(wd, "/True_Values.csv")) %>%
+#true_values <- fread(paste0(local_store_results, "/True_Values.csv")) %>%
 #    left_join(particles_summary, by = c("Map" = "name"))
 
 #fwrite(true_values, "C:\\Users\\winco\\OneDrive\\Documents\\Positive_Controls\\True_Values2.csv")
@@ -300,7 +302,7 @@ true_values <- fread("C:\\Users\\winco\\OneDrive\\Documents\\Positive_Controls\\
 
 for (row in 1:nrow(true_values)) {
   print(true_values[[row, "Map"]])
-  test_accuracy <- fread(paste0(wd, "/particle_details_", true_values[[row, "Map"]], ".csv"))
+  test_accuracy <- fread(paste0(local_store_results, "/particle_details_", true_values[[row, "Map"]], ".csv"))
   if (!is.na(true_values[[row, "count"]]) &
       true_values[[row, "count"]] != "") {
     print("Count % of Total Spiked")
@@ -928,129 +930,107 @@ other <- other[!other %in% blanks]
 
 blank_spec <- read_any(blanks) |> c_spec(res = NULL)
 other_spec <- read_any(other) |> c_spec(res = NULL)
-lib <- load_lib("derivative") %>% filter_spec(
-  .,
-  !.$metadata$material_class %in% c("other plastic", "other material"#,
-                                    #"mineral",
-                                    #"organic matter") &
-                                    .$metadata$spectrum_type == "ftir"
-  )
-  
-  lib_no_blanks <- filter_spec(lib,
-                               !lib$metadata$sample_name %in% blank_spec$metadata$max_cor_name)
-  
-  names(other_spec$metadata) <- paste0("sample_", names(other_spec$metadata))
-  
-  is_OpenSpecy(other_spec)
-  
-  matches <- match_spec(
-    other_spec,
-    blank_spec,
-    top_n = 1,
-    add_library_metadata = "col_id",
-    add_object_metadata = "sample_col_id"
-  )
-  matches2 <- match_spec(
-    other_spec,
-    lib_no_blanks,
-    top_n = 1,
-    add_library_metadata = "sample_name",
-    add_object_metadata = "sample_col_id"
-  )
-  
-  matches_analyzed <- matches %>%
-    mutate(
-      more_similar = match_val > sample_max_cor_val,
-      similarity_ratio = match_val / sample_max_cor_val
-    )
-  
-  sum(matches_analyzed$more_similar) / nrow(matches_analyzed)
-  
-  hist(matches_analyzed$similarity_ratio)
-  
-  #test results
-  summary_matches_precent_all <- matches_analyzed %>%
-    mutate(more_similar = as.character(more_similar)) %>%
-    group_by(more_similar, sample_material_class) %>%
-    summarise(count = n()) %>%
-    ungroup() %>%
-    group_by(more_similar) %>%
-    dplyr::mutate(percent = count / sum(count) * 100)
-  
-  all <- summary_matches_precent_all %>%
-    group_by(sample_material_class) %>%
-    summarise(count = sum(count)) %>%
-    ungroup() %>%
-    mutate(percent = count / sum(count) * 100) %>%
-    mutate(more_similar = "All") %>%
-    as.data.frame()
-  
-  blank_summary <- blank_spec$metadata %>%
-    group_by(material_class) %>%
-    summarise(count = n()) %>%
-    ungroup() %>%
-    dplyr::mutate(percent = count / sum(count) * 100) %>%
-    mutate(more_similar = "Blanks") %>%
-    rename(sample_material_class = material_class)
-  
-  noblanks_summary <- matches2 %>%
-    mutate(material_class = ifelse(match_val > 0.66, material_class, "unknown")) %>%
-    dplyr::filter(!material_class %in% c("organic matter", "mineral")) %>%
-    group_by(material_class) %>%
-    summarise(count = n()) %>%
-    ungroup() %>%
-    dplyr::mutate(percent = count / sum(count) * 100) %>%
-    mutate(more_similar = "NoBlanks") %>%
-    rename(sample_material_class = material_class)
-  
-  lib_summary <- lib$metadata %>%
-    dplyr::filter(!material_class %in% c("organic matter", "mineral")) %>%
-    group_by(material_class) %>%
-    summarise(count = n()) %>%
-    ungroup() %>%
-    dplyr::mutate(percent = count / sum(count) * 100) %>%
-    mutate(more_similar = "Lib") %>%
-    rename(sample_material_class = material_class)
-  
-  study_results_percent_all <- bind_rows(summary_matches_precent_all,
-                                         all,
-                                         blank_summary,
-                                         noblanks_summary,
-                                         lib_summary)
-  
-  ggplot(
-    study_results_percent_all,
-    aes(x = percent, y = sample_material_class, fill = sample_material_class)
-  ) +
-    geom_bar(stat = "identity") +
-    facet_wrap(more_similar ~ .) +
-    theme_bw(base_size = 8) +
-    geom_text(aes(label = count), size = 2, hjust = 0) +
-    scale_fill_viridis_d() +
-    theme(legend.position = "none")
-  
-  (
-    table(lib_no_blanks$metadata$material_class) / length(lib_no_blanks$metadata$material_class)
-  ) |>
-    sort()
-  
-  
-  #Test individual overlap
-  material = "polyolefins (polyalkenes)"
-  
-  other_plastic <- filter_spec(other_spec,
-                               other_spec$metadata$sample_material_class == material)
-  
-  blanks_plastic <- filter_spec(blank_spec, blank_spec$metadata$material_class == material)
-  
-  lib_blanks <- filter_spec(lib, blanks_plastic$metadata$max_cor_name)
-  lib_other <- filter_spec(lib, other_plastic$metadata$sample_max_cor_name)
-  
-  table(blanks_plastic$metadata$max_cor_name)
-  plot(blanks_plastic)
-  plot(lib_blanks)
-  plotly_spec(sample_spec(blanks_plastic, 5), sample_spec(lib_blanks, 5))
-  
-  lib_blanks$metadata$organization |> table()
-  lib_other$metadata$organization |> table()
-  
+lib <- load_lib("derivative") %>% filter_spec(., 
+                                              !.$metadata$material_class %in% c("other plastic", 
+                                                                                "other material"#, 
+                                                                                #"mineral", 
+                                                                                #"organic matter"
+                                              ) & 
+                                                .$metadata$spectrum_type == "ftir")
+
+lib_no_blanks <- filter_spec(lib, !lib$metadata$sample_name %in% blank_spec$metadata$max_cor_name)
+
+names(other_spec$metadata) <- paste0("sample_", names(other_spec$metadata))
+
+is_OpenSpecy(other_spec)
+
+matches <- match_spec(other_spec, blank_spec,top_n = 1, add_library_metadata = "col_id", add_object_metadata = "sample_col_id")
+matches2 <- match_spec(other_spec, lib_no_blanks,top_n = 1, add_library_metadata = "sample_name", add_object_metadata = "sample_col_id")
+
+matches_analyzed <- matches %>%
+  mutate(more_similar = match_val > sample_max_cor_val,
+         similarity_ratio = match_val/sample_max_cor_val)
+
+sum(matches_analyzed$more_similar)/nrow(matches_analyzed)
+
+hist(matches_analyzed$similarity_ratio)
+
+#test results
+summary_matches_precent_all <- matches_analyzed %>%
+  mutate(more_similar = as.character(more_similar)) %>%
+  group_by(more_similar, sample_material_class)%>%
+  summarise(count = n()) %>%
+  ungroup() %>%
+  group_by(more_similar) %>%
+  dplyr::mutate(percent = count/sum(count) * 100) 
+
+all <- summary_matches_precent_all %>%
+  group_by(sample_material_class) %>%
+  summarise(count = sum(count)) %>%
+  ungroup() %>%
+  mutate(percent = count/sum(count) * 100) %>%
+  mutate(more_similar = "All") %>% 
+  as.data.frame()
+
+blank_summary <- blank_spec$metadata %>%
+  group_by(material_class) %>%
+  summarise(count = n()) %>%
+  ungroup() %>%
+  dplyr::mutate(percent = count/sum(count) * 100) %>%
+  mutate(more_similar = "Blanks") %>%
+  rename(sample_material_class = material_class)
+
+noblanks_summary <- matches2 %>%
+  mutate(material_class = ifelse(match_val > 0.66, material_class, "unknown")) %>%
+  dplyr::filter(!material_class %in% c("organic matter",  "mineral")) %>%
+  group_by(material_class) %>%
+  summarise(count = n()) %>%
+  ungroup() %>%
+  dplyr::mutate(percent = count/sum(count) * 100) %>%
+  mutate(more_similar = "NoBlanks") %>%
+  rename(sample_material_class = material_class)
+
+lib_summary <- lib$metadata %>%
+  dplyr::filter(!material_class %in% c("organic matter",  "mineral")) %>%
+  group_by(material_class) %>%
+  summarise(count = n()) %>%
+  ungroup() %>%
+  dplyr::mutate(percent = count/sum(count) * 100) %>%
+  mutate(more_similar = "Lib") %>%
+  rename(sample_material_class = material_class)
+
+study_results_percent_all <- bind_rows(summary_matches_precent_all, 
+                                       all,
+                                       blank_summary,
+                                       noblanks_summary,
+                                       lib_summary)
+
+ggplot(study_results_percent_all, aes(x = percent, y = sample_material_class, fill = sample_material_class)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(more_similar ~.) +
+  theme_bw(base_size = 8) +
+  geom_text(aes(label = count), size = 2, hjust = 0) +
+  scale_fill_viridis_d() +
+  theme(legend.position = "none")
+
+(table(lib_no_blanks$metadata$material_class)/length(lib_no_blanks$metadata$material_class)) |> 
+  sort()
+
+
+#Test individual overlap
+material = "polyolefins (polyalkenes)"
+
+other_plastic <- filter_spec(other_spec, other_spec$metadata$sample_material_class == material)
+
+blanks_plastic <- filter_spec(blank_spec, blank_spec$metadata$material_class == material)
+
+lib_blanks <- filter_spec(lib, blanks_plastic$metadata$max_cor_name)
+lib_other <- filter_spec(lib, other_plastic$metadata$sample_max_cor_name)
+
+table(blanks_plastic$metadata$max_cor_name)
+plot(blanks_plastic)
+plot(lib_blanks)
+plotly_spec(sample_spec(blanks_plastic, 5), sample_spec(lib_blanks, 5))
+
+lib_blanks$metadata$organization |> table()
+lib_other$metadata$organization |> table()
