@@ -92,14 +92,13 @@ analyze_features <- function(project_name,
     separate(col = temp_name, into = c("name_new", "file"), sep = "[.]") |> 
     distinct(name, .keep_all = TRUE)
   
-  # Identify the unique sample names
-  unique(data_temp$name_new)
-  
-  # Group files by name, download, and do analysis
-  for (unique_names in unique(data_temp$name_new)){
+  missing_files <- character()
+
+  # Identify missing files
+  for (unique_name in unique(data_temp$name_new)){
     
     matching_files <- data_temp |> 
-      filter(name_new %in% unique_names)
+      filter(name_new %in% unique_name)
     # Here is where we check if all the necessary files are available 
     # without downloading based on matching files
     
@@ -110,13 +109,25 @@ analyze_features <- function(project_name,
     
     # Skip and log if any required file is missing
     if (!hdr_present || !dat_present || !img_present) {
-      cat("Warning:", unique_names, 
+      missing_files <- c(missing_files, unique_name)
+      cat("Warning:", unique_name,
           if(!hdr_present) "missing .hdr file.\n",
           if(!dat_present) "missing .dat file.\n",
           if(!img_present) "missing image file (.JPG).\n")
-      stop()
     }
+  }
+  
+  # Stop if the missing files list is not empty
+  if (length(missing_files) > 0){
+    stop("Missing files")
+  }
+
+    # Group files by name, download, and do analysis
+  for (unique_name in unique(data_temp$name_new)){
     
+    matching_files <- data_temp |> 
+      filter(name_new %in% unique_name)
+  
     # Create temp file 
     if (dir.exists(local_store_raw)){
       unlink(local_store_raw, recursive = TRUE)
@@ -950,22 +961,27 @@ analyze_features <- function(project_name,
     #   filter(name == "Export_Files") |>
     #   pull(id)
     # 
-    # # Create new folder
-    # new_folder <- drive_mkdir("Spectral_Results",
-    #                           path = as_id(folder_id),
-    #                           overwrite = TRUE
-    #                           )
-    # # Upload files
-    # # Send data up to drive
-    # data_upload <- list.files(wd)
-    # 
-    # for (file in data_upload){
-    # 
-    #   drive_upload(media = file.path(wd, file),
-    #                path = as_id(as.character(new_folder$id))
-    #   )
-    # 
-    # }
+    # Create new folder
+    
+    folder_id <- "1M8c8RXsk5ayeINRsP36FAWHB-7I2Zej7"
+    
+    new_folder <- drive_mkdir("Spectral_Results",
+                              path = as_id(folder_id),
+                              overwrite = TRUE
+                              )
+    # Upload files
+    # Send data up to drive
+    wd <-file.path("data/JHENG/Results")
+    data_upload <- list.files(wd)
+
+    for (file in data_upload){
+
+      drive_upload(media = file.path(wd, file),
+                   path = as_id(as.character(new_folder$id))
+      )
+
+    }
+    
   }
 }
 

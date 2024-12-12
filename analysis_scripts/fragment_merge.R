@@ -4,10 +4,11 @@ library(janitor)
 library(readxl)
 
 # Read in data
-particle_count <- read.csv("SFEI/fragment_data/SFEI_01_ParticleCount - Fragment Data.csv",
+particle_count <- read.csv("data_cleaning/fragment_data/SFEI_01_ParticleCount - Fragment Data.csv",
                            na.strings = c("", "NA")) 
-full_particle <- read.csv("SFEI/fragment_data/full_particle_results.csv")
+full_particle <- read.csv("data_cleaning/fragment_data/SFEI_full_particle_results.csv")
 
+ #--------------Merging Particle Count and Fragment Analysis Results-------------- 
 # Particle Count ----
 particle_count <- particle_count |> 
   mutate(
@@ -65,33 +66,15 @@ full_particle <- full_particle |>
 full_particle1 <- full_particle |>
   mutate(
     color =
-      case_when(grepl("BlueBead", color) ~ "blue", TRUE ~ color),
-    shape = case_when(grepl("BlueBead", shape) ~ "Bead", TRUE ~ shape),
-    shape = case_when(
-      grepl("EMPTY", shape) |
-        grepl("Empty", shape) |
-        grepl("Background", shape) ~ NA_character_,
-      TRUE ~ shape
-    ),
-    shape =
-      case_when(grepl("Pet", shape) |
-                  grepl("PET", shape) ~ "PET", TRUE ~ shape),
-    color =
-      case_when(grepl("\\+BLU", shape) ~ "BLU", TRUE ~ color),
-    shape = 
-      case_when(grepl("\\+BLU", shape) ~ "FRA", TRUE ~ shape),
-    # replace NA for blue in blue bead
-    color = 
-      case_when(
-        grepl("Bead", shape) ~ "BLU", TRUE ~ color
-      ),
-    color = 
-      case_when(
-        grepl("Blu", shape) ~ "BLU", TRUE ~ color
-      ),
-    shape = 
-      case_when(
-        grepl("Blu", shape) ~ "Bead", TRUE ~ shape
+      case_when(grepl("BlueBead", color) ~ "blue",
+                grepl("\\+BLU", shape) | grepl("Bead", shape) | grepl("Blu", shape) ~ "BLU", 
+                TRUE ~ color),
+    shape = case_when(grepl("BlueBead", shape) | grepl("Blu", shape) ~ "Bead",
+                      grepl("EMPTY", shape) | grepl("Empty", shape) |
+                        grepl("Background", shape) ~ NA_character_,
+                      grepl("PET", shape) ~ "PET",
+                      grepl("\\+BLU", shape) ~ "FRA", 
+                      TRUE ~ shape
       )
   ) 
 
@@ -146,48 +129,25 @@ fragment_data1 <- fragment_data |>
       case_when(
         grepl("Ylo", color) | grepl("YLO", color) | 
           grepl("ORA", color) | grepl("GOLD", color) ~ "Orange",
-        TRUE ~ color
-      ),
     # multi color
-    color =
-      case_when(
-        str_count(color, "_") > 1 | grepl("MULTI", color) ~ "Multicolor (2+ colors)", TRUE ~ color
-      ),
+        str_count(color, "_") > 1 | grepl("MULTI", color) ~ "Multicolor (2+ colors)", 
     #white
-    color =
-      case_when(
         grepl("W", color) | grepl("CLR", color) | 
           grepl("SLVR", color) | grepl("GRY", color) | 
-          grepl("Gry", color) ~ "White", TRUE ~ color
-      ),
+          grepl("Gry", color) ~ "White", 
     #Blue
-    color =
-      case_when(
-        grepl("BLU", color) ~ "Blue", TRUE ~ color
-      ),
+        grepl("BLU", color) ~ "Blue", 
     # Black
-    color = 
-      case_when(
-        grepl("BLK", color) | grepl("Blk", color) | grepl("BLA", color) ~ "Black", TRUE ~ color
-      ),
+        grepl("BLK", color) | grepl("Blk", color) | grepl("BLA", color) ~ "Black", 
     # Brown
-    color = case_when(
-      grepl("BRN", color) | grepl("TAN", color) ~ "Brown", TRUE ~ color
-    ),
+      grepl("BRN", color) | grepl("TAN", color) ~ "Brown", 
     # Green
-    color = case_when(
-      grepl("GRN", color) | grepl("Grn", color) ~ "Green", TRUE ~ color
-    ),
+      grepl("GRN", color) | grepl("Grn", color) ~ "Green", 
     # Pink
-    color = case_when(
-      grepl("PNK", color) | grepl("Pnk", color) ~ "Pink", TRUE ~ color
-    ),
+      grepl("PNK", color) | grepl("Pnk", color) ~ "Pink", 
     # Red
-    color = case_when(
-      grepl("RED", color) ~ "Red", TRUE ~ color
-    ),
+      grepl("RED", color) ~ "Red", TRUE~color),
     # Purple
-    
     #shape
     shape = 
       case_when(grepl("FRA", shape) | grepl("Fra", shape) |
@@ -196,9 +156,7 @@ fragment_data1 <- fragment_data |>
                   grepl("LG", shape) | grepl("Empty", shape) | 
                   grepl("FB", shape) | grepl("FML", shape) | 
                   grepl("COMG", shape) | grepl("XL", shape) ~ "Fragment", 
-                TRUE ~ shape
-                ),
-    shape = case_when(grepl("SPH", shape) ~ "Sphere", TRUE ~ shape),
+                  grepl("SPH", shape) ~ "Sphere", TRUE ~ shape),
     ParticleShape = 
       case_when(is.na(ParticleShape) ~ shape, 
                 TRUE ~ ParticleShape),
@@ -216,34 +174,88 @@ unique(fragment_data1$color)
 fragment_data1 <- fragment_data1 |> 
   mutate( 
     ParticleColor = 
-    case_when(grepl("FLM3", ParticleColor) ~ "White", TRUE ~ ParticleColor),
-    ParticleColor = 
-      case_when(grepl("corr", ParticleColor) ~ NA, TRUE ~ ParticleColor),
+    case_when(grepl("FLM3", ParticleColor) ~ "White", 
+              grepl("SFEI_01_S15_066", ParticleID) ~ "Orange",
+              grepl("corr", ParticleColor) ~ NA, TRUE ~ ParticleColor),
     ParticleShape = 
-      case_when(grepl("SFEI_01_S15_066", ParticleID) ~ "Fragment", TRUE ~ ParticleShape),
-    ParticleColor = 
-      case_when(grepl("SFEI_01_S15_066", ParticleID) ~ "Orange", TRUE ~ ParticleColor)
-  )
+      case_when(grepl("SFEI_01_S15_066", ParticleID) ~ "Fragment", TRUE ~ ParticleShape)
+  ) |> 
+  select(-dupes)
 
 unique(fragment_data1$ParticleColor)
 unique(fragment_data1$ParticleShape)
 
-write.csv(fragment_data1, "SFEI/fragment_data/fragment_data_full_final.csv")
+write.csv(fragment_data1, "data_cleaning/fragment_data/SEI_fragment_data_full_final.csv")
 
 
 # ----------------------------- Multiplier ------------------------------------
-multiplier <- read_xlsx("SFEI/SFEI_01_Multiplier.xlsx", sheet = "Fragments_Fibers") |> 
+multiplier <- read_xlsx("data_cleaning/SFEI_01_Multiplier.xlsx", sheet = "Fragments_Fibers") |>
   clean_names()
 
 
 # Multiplier by sample
 # By each sample estimate of total particles found
+# total of each type
 fragment_total <- fragment_data1 |> 
-  group_by(SampleID) |> 
+  group_by(SampleID, ParticleShape) |> 
   summarize(count = n()) |> 
+  pivot_wider(names_from = ParticleShape, values_from = count) |> 
+  mutate(total_count = rowSums(across(everything()), na.rm = TRUE)) |> 
   clean_names() |> 
   left_join(multiplier) |> 
   select(-proportions_of_sample) |> 
-  mutate(total = count/multiplier)
+  mutate(total = total_count/multiplier) 
 
-# total fragment
+# for now ignore type -- double check
+fragment_total <- fragment_total |> 
+  select(sample_id, total_count,total)
+
+
+# count of plastics
+plastics_total <- fragment_data1|> 
+  filter(!(material_class %in% c("mineral", "organic matter", "cellulose derivatives (ether cellulose)"))) |> 
+  group_by(SampleID) |> 
+  summarize(count_plastic = n()) |> 
+  clean_names()
+
+
+# break down of plastics 
+plastics_breakdown <- fragment_data1 |>
+  filter(!(material_class %in% c("mineral", "organic matter", "cellulose derivatives (ether cellulose)"))) |>
+  mutate(match_rate =
+           case_when(
+             match_val > 0.60 ~ "above 60%",
+             match_val < 0.60 & match_val > 0.30 ~ "above 30%",
+             TRUE ~ "0"
+           )) |>
+  filter(match_rate != "0") |>
+  group_by(SampleID, match_rate) |>
+  summarize(count_plastic = n()) |>
+  pivot_wider(names_from = match_rate, values_from = count_plastic) |> 
+  clean_names()
+
+plastics_df <- left_join(fragment_total, plastics_total) |> 
+  left_join(plastics_breakdown)
+
+
+plastics_df1 <- plastics_df |> 
+  mutate(
+    p_plastic = (count_plastic/total_count)*total
+  )
+
+# plastics_total <- fragment_data1 |> 
+#   filter(!(material_class %in% c("mineral", "organic matter", "cellulose derivatives (ether cellulose)"))) |> 
+#   mutate(match_rate = 
+#            case_when(
+#              match_val > 0.60 ~ "above 60%", 
+#              match_val < 0.60 & match_val > 0.30 ~ "above 30%",
+#              TRUE ~ "0"
+#            )) |> 
+#   filter(match_rate != "0") |> 
+#   group_by(SampleID, ParticleShape, match_rate) |> 
+#   summarize(count_plastic = n()) |> 
+#   pivot_wider(names_from = match_rate, values_from = count_plastic)
+#   
+
+
+write.csv(fragment_total, "SFEI/fragment_data/SFEI_fragment_multiplier_final.csv")

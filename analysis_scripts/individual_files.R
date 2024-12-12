@@ -9,7 +9,8 @@ library(googledrive)
 # spa files - individual files to run
 
 # Load library for analysis
-lib <- load_lib("derivative") |> 
+lib <- load_lib("derivative") 
+lib <- lib |> 
   filter_spec(lib$metadata$spectrum_type == "ftir")
 
 # Find files to download
@@ -29,10 +30,13 @@ data_search <- shared_drive_find("Project") |>
   filter(grepl("\\.(spa)|(csv)|(jdx)|(dx)|([0-9])$", name, ignore.case = T))
 # Found the correct folder path - now create a function that conducts the analysis for each folder that starts with SFEI
 
+# 
+data_search <- drive_ls(as_id("1sich54gPbxQW01R_IdMJXSM5Eo7NlCW9"))
+
 #Set a folder to save data locally
 local_store <- file.path("data",project_name)
-local_store_raw <- file.path("data", project_name, "Raw", fsep = "/")
-local_store_results <- file.path("data", project_name, "Results", fsep = "/")
+local_store_raw <- file.path("data", project_name, "Raw_SPA", fsep = "/")
+local_store_results <- file.path("data", project_name, "Results_SPA", fsep = "/")
 
 # Create folders ----
 
@@ -83,9 +87,7 @@ for (file in individual_spec) {
 
 individual_spec <- list.files(local_store_raw, full.names = T, recursive = T)
 
-indiv_files <- read_any(individual_spec) |>
-  c_spec("common") |>
-  # 800 - 3800
+indiv_files <- read_any(individual_spec, c_spec_args = list(range = "common", res = NULL)) |>
   process_spec(
     restrict_range = TRUE,
     restrict_range_args = list(min = 800, max = 3800),
@@ -97,6 +99,7 @@ indiv_files <- read_any(individual_spec) |>
       ),
     flatten_range = T
   )
+
 
 top_matches <- match_spec(x = indiv_files, 
                           library = lib, 
@@ -134,7 +137,9 @@ write.csv(
 folder_location <- shared_drive_find("Project") |> 
   drive_ls("Customer Projects") |> 
   drive_ls() |> 
-  filter(name %in% project_name) |> 
+  filter(name %in% map(strsplit(project_name, split = "_"),1)) |>
+  drive_ls() |> 
+  filter(name %in% project_name) |>
   drive_ls() |> 
   filter(name == "Particle_500um_Data") |> 
   drive_ls() |> 
@@ -147,6 +152,12 @@ new_folder <- drive_mkdir("Single_Particle_Results",
                           overwrite = TRUE
 )
 
+
+new_folder <- drive_mkdir("Single_Particle_Results",
+                          path = as_id("1sich54gPbxQW01R_IdMJXSM5Eo7NlCW9"),
+                          overwrite = TRUE
+)
+
 drive_upload(media = file.path(local_store_results,
   "plastic_df.csv"
 ), path = as_id(as.character(new_folder$id)))
@@ -155,3 +166,4 @@ drive_upload(media = file.path(local_store_results,
 drive_upload(media = file.path(local_store_results,
   "full_particle_results.csv"
 ), path = as_id(as.character(new_folder$id)))
+

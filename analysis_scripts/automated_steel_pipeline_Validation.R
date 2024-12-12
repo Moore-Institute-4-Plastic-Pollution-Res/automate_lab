@@ -17,9 +17,13 @@ study_results <- fread(paste0(local_store_results, "/particle_details_all.csv"))
   mutate(sample_id = gsub("([0-9]{1}of[0-9]{1}_.*)|(_lft)|(_rt)", "", sample_id))
 
 #Crowding factor
-study_results %>%
+crowding_factor <- study_results %>%
   group_by(sample_id) %>%
-  summarise(crowd_factor = sum(area_um2[sqrt(area_um2) > 500]) / sum(area_um2))
+  summarise(crowd_factor = sum(area_um2[sqrt(area_um2) > 500]) / sum(area_um2)) 
+
+# greater than 50%
+crowding <- crowding_factor |> 
+  filter(crowd_factor > .50)
 
 #Percent comp
 study_results_percent <- study_results %>%
