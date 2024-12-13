@@ -39,3 +39,8 @@ rsconnect/
 .secrets/
 data/
 www/
+data_cleaning/fiber_data
+data_cleaning/filter_500um
+data_cleaning/final
+data_cleaning_fragment_data
+data_cleaning/SFEI_01_Multiplier.xlsx
