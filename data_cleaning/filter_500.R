@@ -1,5 +1,6 @@
 library(tidyverse)
 library(readxl)
+library(stringr)
 
 filter_data <- read_csv("data_cleaning/filter_500um/filter_500_full_data.csv")
 multiplier <- readxl::read_xlsx("data_cleaning/SFEI_01_Multiplier.xlsx", sheet = "Filter") |>
@@ -18,9 +19,6 @@ total_plastic <- filter_data |>
          ) |> 
   group_by(sample_id) |> 
   summarize(plastic_count = n())
-
-library(dplyr)
-library(stringr)
 
 filter_data_df <- left_join(total_count, total_plastic) |> 
   mutate(
@@ -42,4 +40,9 @@ filter_data_df <- left_join(total_count, total_plastic) |>
 
 write.csv(filter_data_df, "data_cleaning/final/SFEI_filter_final.csv")
 
-
+# Particle count (plastic count)
+particle_count <- filter_data |> 
+  filter(bad_spectra == "TRUE",
+         !(material_class %in% c("other material", "mineral", 
+                                 "organic matter", "cellulose derivatives (ether cellulose)"))
+  )

@@ -1,6 +1,7 @@
 library(tidyverse)
 library(readxl)
 library(openxlsx)
+library(janitor)
 
 # Read and merge spreadsheets
 fiber_data <- loadWorkbook("data_cleaning/fiber_data/SFEI_01_FIBER_Meas.xlsx")
@@ -8,8 +9,7 @@ fiber_data <- loadWorkbook("data_cleaning/fiber_data/SFEI_01_FIBER_Meas.xlsx")
 multiplier <- readxl::read_xlsx("data_cleaning/SFEI_01_Multiplier.xlsx", sheet = "Fragments_Fibers") |>
   clean_names()
 
-
-
+# Load in fiber data and merge 
 df <- fiber_data$sheet_names |> 
   lapply(function(x) read.xlsx(fiber_data, sheet = x)) |> 
   do.call(what=rbind)
@@ -24,7 +24,7 @@ fiber_df <- df |>
         "\\1_\\2\\3"
   )) |> 
   filter(grepl("SFEI", sample_id)) |> 
-# Variation of fiberpolymer type
+# Variation of Fiber Polymer Type 
   mutate(FiberPolymerType =
            case_when(
              grepl("Cellulose", FiberPolymerType) ~ "Cellulose Derivative",
@@ -39,12 +39,12 @@ fiber_df <- df |>
            )
            )
 
-
+# Total count of measured object in each sample
 fiber_total <- fiber_df |> 
   group_by(sample_id) |> 
   summarize(total_count = n()) 
 
-# fiber_plastics 
+# Total count of identified plastic in each sample 
 fiber_type <- fiber_df |> 
   group_by(sample_id,FiberPolymerType) |> 
   mutate(
@@ -64,10 +64,34 @@ fiber_type <- fiber_df |>
     ) |> 
   select(-c(proportions_of_sample, multiplier)) |> 
   mutate(
-    total_count = rowSums(select(where(is.numeric)), na.rm = TRUE)
-  )
-  
+    total_count = rowSums(across(where(is.numeric)), na.rm = TRUE))
 
 
+write.csv(fiber_type, "data_cleaning/final/SFEI_fiber_data.csv")    
 
+
+# Polymer type count
+fiber_breakdown <- fiber_df |> 
+  group_by(sample_id, FiberPolymerType) |> 
+  summarize(count = n()) |> 
+  left_join(multiplier) |> 
+  mutate(across(
+    .cols = where(is.numeric) & !all_of("multiplier"),
+    ~ .x/multiplier)
+  ) |> 
+  select(-c(proportions_of_sample, multiplier)) |> 
+  group_by(FiberPolymerType) |> 
+  summarize(count = sum(count)) |> 
+  # remove non plastics
+  filter(!(FiberPolymerType %in% c("Cellulose Derivative", "Organic", "Unknown"))) |> 
+  # format polymer name as fragment polymer material class
+  mutate(FiberPolymerType = 
+           case_when(
+             grepl("Poly", FiberPolymerType) ~ 
+               str_replace(FiberPolymerType, "^Poly([A-Za-z]+)$", "poly(\\1)"),
+             TRUE ~ tolower(FiberPolymerType)
+           )
+           )
+
+write.csv(fiber_breakdown, "data_cleaning/final/SFEI_fiber_polymer_count.csv")  
 
