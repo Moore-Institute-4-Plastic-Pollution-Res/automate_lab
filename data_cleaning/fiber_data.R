@@ -59,15 +59,21 @@ fiber_type <- fiber_df |>
   pivot_wider(names_from = type, values_from = count_type) |> 
   left_join(multiplier) |> 
   mutate(across(
-    .cols = where(is.numeric) & !all_of("multiplier"),
-    ~ .x/multiplier)
+    .cols = where(is.numeric) & !all_of(c("subsample_ratio", "multiplier")),
+    ~ (.x/subsample_ratio)/multiplier)
     ) |> 
   select(-c(proportions_of_sample, multiplier)) |> 
   mutate(
     total_count = rowSums(across(where(is.numeric)), na.rm = TRUE))
 
+fiber_type <- fiber_type |> 
+  select(sample_id, Plastic) |> 
+  mutate(Plastic = floor(Plastic)) |> 
+  rename(SampleID = sample_id,
+         "Particle Count" = Plastic
+         ) 
 
-write.csv(fiber_type, "data_cleaning/final/SFEI_fiber_data.csv")    
+write.csv(fiber_type, "data_cleaning/final/SFEI_fiber_plastic_count.csv")    
 
 
 # Polymer type count
@@ -76,8 +82,8 @@ fiber_breakdown <- fiber_df |>
   summarize(count = n()) |> 
   left_join(multiplier) |> 
   mutate(across(
-    .cols = where(is.numeric) & !all_of("multiplier"),
-    ~ .x/multiplier)
+    .cols = where(is.numeric) & !all_of(c("subsample_ratio","multiplier")),
+    ~ (.x/subsample_ratio)/multiplier)
   ) |> 
   select(-c(proportions_of_sample, multiplier)) |> 
   group_by(FiberPolymerType) |> 
@@ -87,11 +93,11 @@ fiber_breakdown <- fiber_df |>
   # format polymer name as fragment polymer material class
   mutate(FiberPolymerType = 
            case_when(
-             grepl("Poly", FiberPolymerType) ~ 
+             grepl("Poly", FiberPolymerType) & !(str_detect(FiberPolymerType,"Polyvinylalcohols")) ~ 
                str_replace(FiberPolymerType, "^Poly([A-Za-z]+)$", "poly(\\1)"),
              TRUE ~ tolower(FiberPolymerType)
            )
-           )
+           ) |> 
+  mutate(count = floor(count))
 
 write.csv(fiber_breakdown, "data_cleaning/final/SFEI_fiber_polymer_count.csv")  
-

@@ -12,37 +12,49 @@ total_count <- filter_data |>
   summarize(total = n())
 
 # good spectra and plastic
-total_plastic <- filter_data |> 
+total_plastic <- filter_data |>
   filter(bad_spectra == "TRUE",
-         !(material_class %in% c("other material", "mineral", 
-                                 "organic matter", "cellulose derivatives (ether cellulose)"))
-         ) |> 
-  group_by(sample_id) |> 
-  summarize(plastic_count = n())
-
-filter_data_df <- left_join(total_count, total_plastic) |> 
+         max_cor_val > 0.6,
+         !(
+           material_class %in% c(
+             "other material",
+             "mineral",
+             "organic matter",
+             "cellulose derivatives (ether cellulose)"
+           )
+         )) |>
   mutate(
-    sample_name = str_replace(
-      sample_id, 
-      "^([^_]+_[^_]+)_(S|W)(\\d+)_.*", 
-      "\\1_\\2\\3"
-    )
+    sample_id = str_replace_all(sample_id, "O", "0"),
+    sample_name = str_replace(sample_id, "^([^_]+_[^_]+)_(S|W)(\\d+)_.*", "\\1_\\2\\3")
+    ) 
+
+# Particle count
+particle_count <- total_plastic |> 
+  group_by(sample_name) |> 
+  summarize(count = n()) |> 
+  left_join(multiplier, by = c("sample_name" = "sample_id")) |> 
+  mutate(across(.cols = where(is.numeric) & !all_of("sample_multiplier"), ~ .x /
+                  sample_multiplier),
+         count = floor(count)
+         ) |> 
+  select(-sample_multiplier) |> 
+  rename(SampleID = sample_name,
+         "Particle Count" = count
+         )
+
+write.csv(particle_count, "data_cleaning/final/SFEI_filter_plastic_count.csv")
+
+# Particle count by polymer
+polymer_count <- total_plastic |> 
+  group_by(sample_name,material_class) |> 
+  summarize(count = n()) |> 
+  left_join(multiplier, by = c("sample_name" = "sample_id")) |> 
+  mutate(across(.cols = where(is.numeric) & !all_of("sample_multiplier"), ~ .x /
+                  sample_multiplier),
+         count = floor(count)
   ) |> 
-  group_by(sample_name) |>
-  summarise(across(where(is.numeric), ~sum(.x,na.rm = TRUE))) |> 
-  rename(sample_id = sample_name) |> 
-  # modify the O as 0
-  mutate(sample_id = 
-           str_replace_all(sample_id, "O", "0")
-           ) |> 
-  left_join(multiplier) |> 
-  mutate(total_multi = plastic_count/sample_multiplier)
+  group_by(material_class) |> 
+  summarize(count = sum(count))
 
-write.csv(filter_data_df, "data_cleaning/final/SFEI_filter_final.csv")
+write.csv(polymer_count, "data_cleaning/final/SFEI_filter_polymer_count.csv")
 
-# Particle count (plastic count)
-particle_count <- filter_data |> 
-  filter(bad_spectra == "TRUE",
-         !(material_class %in% c("other material", "mineral", 
-                                 "organic matter", "cellulose derivatives (ether cellulose)"))
-  )
