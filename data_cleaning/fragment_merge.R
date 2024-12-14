@@ -234,8 +234,8 @@ fragment_total <- fragment_data1 |>
   clean_names() |>
   left_join(multiplier) |>
   select(-proportions_of_sample) |>
-  mutate(across(.cols = where(is.numeric) & !all_of("multiplier"), ~ .x /
-                  multiplier)) |>
+  mutate(across(.cols = where(is.numeric) & !all_of(c("subsample_ratio","multiplier")), ~ (.x /
+                  subsample_ratio)/multiplier)) |>
   select(-multiplier) |>
   mutate(total_count = rowSums(across(everything()), na.rm = TRUE))
 
@@ -263,27 +263,20 @@ plastics_breakdown <- fragment_data1 |>
       "cellulose derivatives (ether cellulose)"
     )
   ), !is.na(ParticleShape)) |>
-  mutate(
-    match_rate =
-      case_when(
-        match_val > 0.60 ~ "above 60%",
-        match_val < 0.60 & match_val > 0.30 ~ "above 30%",
-        TRUE ~ "0"
-      )
-  ) |>
-  filter(match_rate != "0") |>
-  group_by(SampleID, match_rate) |>
+  group_by(SampleID) |>
   summarize(count_plastic = n()) |>
-  pivot_wider(names_from = match_rate, values_from = count_plastic) |>
   clean_names()
 
 plastics_df <- left_join(plastics_total, plastics_breakdown) |>
   left_join(multiplier) |>
   select(-proportions_of_sample) |>
-  mutate(across(.cols = where(is.numeric) & !all_of("multiplier"), ~ .x /
-                  multiplier)) |>
-  select(-multiplier) |>
-  rename(SampleID = sample_id, "Particle Count" = count_plastic)
+  mutate(across(.cols = where(is.numeric) &
+                  !all_of(c("subsample_ratio","multiplier")), ~ (.x /
+                  subsample_ratio)/multiplier)
+         ) |>
+  select(-c(multiplier, subsample_ratio)) |>
+  mutate(count_plastic = floor(count_plastic)) |> 
+  rename(SampleID = sample_id, "Particle Count" = count_plastic) 
 
 # Particle count by polymer
 plastics_breakdown <- fragment_data1 |>
@@ -297,15 +290,18 @@ plastics_breakdown <- fragment_data1 |>
   group_by(SampleID, material_class) |>
   summarize(count = n()) |>
   left_join(multiplier, by = c("SampleID" = "sample_id")) |>
-  mutate(across(.cols = where(is.numeric) & !all_of("multiplier"), ~ .x /
-                  multiplier)) |>
+  mutate(across(
+    .cols = where(is.numeric) &
+      !all_of(c("subsample_ratio", "multiplier")),
+    ~ (.x/subsample_ratio) / multiplier
+  )
+  ) |>
   select(-c(multiplier, proportions_of_sample)) |>
   group_by(material_class) |>
-  summarize(count = sum(count))
-
-
+  summarize(count = sum(count)) |> 
+  mutate(count = floor(count))
 
 write.csv(plastics_df,
-          "data_cleaning/final/SFEI_fragment_data_final.csv")
+          "data_cleaning/final/SFEI_fragment_plastic_count.csv")
 write.csv(plastics_breakdown,
           "data_cleaning/final/SFEI_fragment_polymer_count.csv")
