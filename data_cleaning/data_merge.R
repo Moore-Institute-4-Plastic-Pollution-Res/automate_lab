@@ -21,24 +21,28 @@ polymer_count <-
   rbind(fiber_breakdown, fragment_breakdown, filter_breakdown) |> 
   group_by(material_class) |> 
   summarize(count = sum(count)) |> 
-  mutate(percent = round((count/(sum(count)) * 100),1)
+  mutate(percent = round((count/(sum(count, na.rm = TRUE)) * 100),1)
          ) |> 
-  arrange(desc(percent))
+  arrange(desc(percent)) |> 
+  na.omit()
 
 # Set MIPPR sample ID to actual project ID
-sampleid <- readxl::read_xlsx("data/SFEI_01 LabGuruSampleWorksheet.xlsx", sheet = 2) |>
+sampleid <- readxl::read_xlsx("data/LabGuruSampleWorksheet.xlsx", sheet = 2) |>
   clean_names() |> 
   filter(!is.na(mippr_sample_id)) |> 
-  select(sfei_sample_id, mippr_sample_id)
+  select(1,2) |> 
+  rename(sample_name = 1)
 
 # set sample ID with particle count
 plastic_count <- left_join(sampleid, plastic_count, by = c("mippr_sample_id" = "SampleID")) |> 
   select(-mippr_sample_id) |> 
-  drop_na()
+  drop_na() |> 
+  arrange(desc(`Particle Count`))
+  
 
 # clean environment
-vars_keep <- c("plastic_count", "polymer_count", "MIPPR_breakdown", "filter_data")
-rm(list = setdiff(ls(), vars_keep))
+# vars_keep <- c("plastic_count", "polymer_count", "MIPPR_breakdown", "filter_data", "project_name", "local_store_results")
+# rm(list = setdiff(ls(), vars_keep))
 
 # ** Need to find a better way to check for similarities of material class to group them
 

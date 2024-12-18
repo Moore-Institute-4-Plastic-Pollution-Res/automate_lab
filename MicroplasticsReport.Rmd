@@ -41,12 +41,12 @@ In addition to FTIR mosaic images, compound microscope scans, stereoscope images
 The FTIR spectral results were analyzed using OpenSpecy software, version `r packageVersion("OpenSpecy")`. Nonplastic particles found in the sample were not included in the final results. The number of plastic particles in each sample and the percentage of each polymer by count and size class are presented in Table 1. Table 2 presents the types of polymers detected, particle count by polymer type, and percent of total polymers by each polymer type for all samples. Raw data and the OpenSpecy code can be found in the submitted data package.
 
 ## MIPPR Quality Assurance/Quality Control Samples
-With each batch of samples, the MIPPR laboratory prepared a procedural blank and a laboratory-fortified blank, which was spiked with a known number of particles of particular types of plastic and size classes. The procedural blank provides an indication of the level of contamination that could come from the laboratory procedure. The identification of and percent recovery of particles in the laboratory fortified blank provide information as to the accuracy of the method. The results of the MIPPR QA/QC samples are presented in Tables 3A-C.
+With each batch of samples, the MIPPR laboratory prepared a procedural blank and a laboratory-fortified blank, which was spiked with a known number of particles of particular types of plastic and size classes. The procedural blank provides an indication of the level of contamination that could come from the laboratory procedure. The identification of and percent recovery of particles in the laboratory fortified blank provide information as to the accuracy of the method. The results of the MIPPR QA/QC samples are presented in Tables 3A-B.
 
 ## DATA SUMMARY
 Here, we summarize the number of particles per sample, the polymer types, and size characteristics. The data set includes a .csv file for particle measurements (particle_details_all) and a file of spectra wavelength measurements for the particle polymers (median_spec_all).
 
-The plastic particle counts for all samples are summarized below in Table 1. The particle counts in the samples ranged from `r min(plastic_count[["Particle Count"]])` to `r max(plastic_count[["Particle Count"]])` particles. Table 2 presents the types of polymers detected, particle count by polymer type, and percent of total polymers by each polymer type for all samples. `r str_to_title(as.character(english(nrow(polymer_count))))` polymer types were detected, the most common were `r polymer_count[1,1] |> pull()`, at `r polymer_count[1,3]` percent of the total number of polymers detected, and `r polymer_count[2,1] |> pull()`, which accounted for `r polymer_count[2,3] |> pull()` percent of the total number of polymers detected. 
+The plastic particle counts for all samples are summarized below in Table 1. The particle counts in the samples ranged from `r min(plastic_count[["Particle Count"]])` to `r format(max(plastic_count[["Particle Count"]]), big.mark = ",")` particles. Table 2 presents the types of polymers detected, particle count by polymer type, and percent of total polymers by each polymer type for all samples. `r str_to_title(as.character(english(nrow(polymer_count))))` polymer types were detected, the most common were `r polymer_count[1,1] |> pull()`, at `r polymer_count[1,3]` percent of the total number of polymers detected, and `r polymer_count[2,1] |> pull()`, which accounted for `r polymer_count[2,3] |> pull()` percent of the total number of polymers detected. 
 
 ```{r table1, echo=FALSE}
 big_border = fp_border(color="black", width = 2)
@@ -60,15 +60,18 @@ set_flextable_defaults(
   padding.left = 4, padding.right = 4)
 
 ft <- flextable(plastic_count) |>
-  set_caption(caption = "Plastic particle count by sample name", 
+  set_caption(caption = "Table 1.Plastic particle count by sample name", 
               autonum = run_autonum(seq_id = "tab", bkm = "table6")) |>  
-  set_header_labels(sample_name = "sfei_sample_id", count = "Particle Count") |>
+  set_header_labels(sample_name = "Sample", count = "Particle Count") |>
   border_remove() |>
   border_outer(part = "all", border = big_border) |>
   border_inner_h(part = "all", border = small_border) |>
   border_inner_v(part = "all", border = small_border) |> 
-  fontsize(size = 10) |> 
+  fontsize(size = 11) |> 
   autofit()
+
+
+
 
 ft
 ```
@@ -76,7 +79,7 @@ ft
 
 ```{r table2, echo=FALSE}
 ft2 <- flextable(polymer_count) |>
-  set_caption(caption = "Types of polymers detected, particle count by polymer type, and percent of total polymers by each polymer type for all samples analyzed by FTIR.",
+  set_caption(caption = "Table 2.Types of polymers detected, particle count by polymer type, and percent of total polymers by each polymer type for all samples analyzed by FTIR.",
                             autonum = run_autonum(seq_id = "tab", bkm = "tables6")
               ) |>
   set_header_labels(material_class = "Polymer Class",
@@ -86,7 +89,7 @@ ft2 <- flextable(polymer_count) |>
   border_outer(part = "all", border = big_border) |>
   border_inner_h(part = "all", border = small_border) |>
   border_inner_v(part = "all", border = small_border) |> 
-  fontsize(size = 10) |> 
+  fontsize(size = 11) |> 
   autofit()
 
 ft2
@@ -94,9 +97,9 @@ ft2
 
 ## QA/QC Data
 
-The MIPPR laboratory ran a laboratory procedural blank (PB) with each batch of samples. One liter of microplastics-analysis-grade (MAG) water was prepared and analyzed using the same procedures as the SFEI samples. The results are reported in 3A and the data are included in the attached data package. The results of the procedural blanks provide indication of possible laboratory contamination introduced during sample preparation and analysis.
+The MIPPR laboratory ran a laboratory procedural blank (PB) with each batch of samples. One liter of microplastics-analysis-grade (MAG) water was prepared and analyzed using the same procedures as the `r project_name`` samples. The results are reported in 3A and the data are included in the attached data package. The results of the procedural blanks provide indication of possible laboratory contamination introduced during sample preparation and analysis.
 
-The MIPPR laboratory tracks the accuracy and precision of the analytical method through Laboratory Fortified Blanks (LFBs). An LFB is a sample of MAG water spiked with a known type and quantity of plastic material. LFBs were spiked with polyamide 66 (sized >500 µm), cellulose acetate (sizes 212-500 µm), and red beads (polyolefins sized 75-90 µm). The recoveries of the spiked polymers were 100, 103, and 92%, respectively, for the soil batch (Table 3B). These recoveries are within the acceptable range of 50% -150%, as defined by the method. The recoveries of the spiked polymers were 100, 75, and 20% respective accuracy levels for the water batch (Table 3C). One of these recoveries, the red beads in the 20-212 µm range, is not within the acceptable range of 50% -150%, as defined by the method.
+The MIPPR laboratory tracks the accuracy and precision of the analytical method through Laboratory Fortified Blanks (LFBs). An LFB is a sample of MAG water spiked with a known type and quantity of plastic material. LFBs were spiked with polyamide 66 (sized >500 µm), cellulose acetate (sizes 212-500 µm), and red beads (polyolefins sized 75-90 µm). The recoveries of the spiked polymers were `r pa66`, `r cellu`, and `r poly`%, respectively (Table 3B). These recoveries are `r acceptable` of 50% -150%, as defined by the method. One of these recoveries, the `r recover`, is not within the acceptable range of 50% -150%, as defined by the method.
 
 
 ```{r table3a, echo=FALSE}
@@ -110,23 +113,18 @@ ft3a <- flextable(mippr_pb) |>
   border_outer(part = "all", border = big_border) |>
   border_inner_h(part = "all", border = small_border) |>
   border_inner_v(part = "all", border = small_border) |> 
-  fontsize(size = 10) |> 
+  fontsize(size = 11) |> 
   autofit()
 
 ft3a
 ```
 
-```{r table5b, echo=FALSE}
-table5b <- data.frame(
-  col1 = c(">500um", "212-500um", "20-200um"),
-  col2 = c("PA66", "Cellulose Acetate", "Red Bead"),
-  col3 = c("Value1", "Value2", "Value3"),
-  col4 = c("Value1", "Value2", "Value3"),
-  col5 = c("Value1", "Value2", "Value3")
-)
 
-ft5b <- flextable(table5b) |> 
-  set_caption(caption = "Table 5B. Recovery of spiked compounds in MIPPR_LFB03_25APR24 used for samples.") |>  
+
+```{r table5b, echo=FALSE}
+
+ft5b <- flextable(lfb_df) |> 
+  set_caption(caption = paste("Table 3B. Recovery of spiked compounds in", mippr_lfb_name,"used for samples.")) |>  
   set_header_labels(
   col1 = "Size Class",
   col2 = "Types of Plastic",
@@ -138,7 +136,7 @@ ft5b <- flextable(table5b) |>
   border_outer(part = "all", border = big_border) |> 
   border_inner_h(part = "all", border = small_border) |>  
   border_inner_v(part = "all", border = small_border) |> 
-  fontsize(size = 10) |>
+  fontsize(size = 11) |>
   autofit()
 
 ft5b
@@ -151,6 +149,10 @@ ft5b
   ##########################################################################################################################
 ```
 ## NOTES
+<!---
+This is still mostly hard coded
+-->
+`r notes`
 
 ##
 ```{r signature, echo=FALSE, out.width="25%"}
