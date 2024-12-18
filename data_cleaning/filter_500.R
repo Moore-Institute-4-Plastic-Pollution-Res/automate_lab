@@ -1,14 +1,3 @@
-library(tidyverse)
-library(readxl)
-library(stringr)
-
-filter_data <- read_csv("data_cleaning/data/filter_500_full_data.csv")
-multiplier <- readxl::read_xlsx("data_cleaning/data/SFEI_01_Multiplier.xlsx", sheet = "Filter") |>
-  clean_names() |> 
-  mutate(
-    sample_id = str_replace_all(sample_id, "O", "0"))
-
-
 # total count to then focus on the good spectra and plastics
 total_count <- filter_data |> 
   group_by(sample_id) |> 
@@ -35,7 +24,7 @@ total_plastic <- filter_data |>
 filter_particle_count <- total_plastic |> 
   group_by(sample_name) |> 
   summarize(count = n()) |> 
-  left_join(multiplier, by = c("sample_name" = "sample_id")) |> 
+  left_join(multiplier2, by = c("sample_name" = "sample_id")) |> 
   mutate(across(.cols = where(is.numeric) & !all_of("sample_multiplier"), ~ .x /
                   sample_multiplier),
          count = floor(count)
@@ -50,7 +39,7 @@ filter_breakdown <- total_plastic |>
   filter(!str_detect(sample_id, "MIPPR")) |> 
   group_by(sample_name,material_class) |> 
   summarize(count = n()) |> 
-  left_join(multiplier, by = c("sample_name" = "sample_id")) |> 
+  left_join(multiplier2, by = c("sample_name" = "sample_id")) |> 
   mutate(across(.cols = where(is.numeric) & !all_of("sample_multiplier"), ~ .x /
                   sample_multiplier),
          count = floor(count)
@@ -68,7 +57,7 @@ MIPPR_breakdown <-  total_plastic |>
   filter(str_detect(sample_id, "MIPPR")) |> 
   group_by(sample_name,material_class) |> 
   summarize(count = n()) |> 
-  left_join(multiplier, by = c("sample_name" = "sample_id")) |> 
+  left_join(multiplier2, by = c("sample_name" = "sample_id")) |> 
   mutate(across(.cols = where(is.numeric) & !all_of("sample_multiplier"), ~ .x /
                   sample_multiplier),
          count = floor(count)

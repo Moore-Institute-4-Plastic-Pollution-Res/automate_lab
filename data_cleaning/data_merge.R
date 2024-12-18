@@ -1,7 +1,3 @@
-library(tidyverse)
-library(readxl)
-library(janitor)
-
 # Merge plastic count data for fragment, fiber, and filter 
 # Read in data
 source("data_cleaning/fragment_merge.R")
@@ -17,19 +13,12 @@ plastic_count <- plastic_df |>
 
 # Merge polymer count data for fragment, fiber, and filter ----
 # Read in data
-polymer_count <- 
-  rbind(fiber_breakdown, fragment_breakdown, filter_breakdown) |> 
+polymer_count <- rbind(fiber_breakdown, fragment_breakdown, filter_breakdown) |> 
   group_by(material_class) |> 
   summarize(count = sum(count)) |> 
   mutate(percent = round((count/(sum(count)) * 100),1)
          ) |> 
   arrange(desc(percent))
-
-# Set MIPPR sample ID to actual project ID
-sampleid <- readxl::read_xlsx("data/SFEI_01 LabGuruSampleWorksheet.xlsx", sheet = 2) |>
-  clean_names() |> 
-  filter(!is.na(mippr_sample_id)) |> 
-  select(sfei_sample_id, mippr_sample_id)
 
 # set sample ID with particle count
 plastic_count <- left_join(sampleid, plastic_count, by = c("mippr_sample_id" = "SampleID")) |> 

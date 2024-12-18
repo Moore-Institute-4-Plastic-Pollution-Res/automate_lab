@@ -1,23 +1,11 @@
-library(tidyverse)
-library(magrittr)
-library(janitor)
-library(readxl)
-
-# Read in data
-particle_count <- read.csv(
-  "data_cleaning/data/SFEI_01_ParticleCount - Fragment Data.csv",
-  na.strings = c("", "NA")
-)
-full_particle <- read.csv("data_cleaning/data/SFEI_full_particle_results.csv")
 
 #--------------Merging Particle Count and Fragment Analysis Results--------------
 # Particle Count ----
-particle_count <- particle_count |>
+particle_count2 <- particle_count |>
   mutate(
     # Replace characters in SampleID first
     SampleID = str_replace_all(SampleID, "-", "_"),
     SampleID = str_replace_all(SampleID, "W", "0"),
-    
     # Extract the last two characters from WellID
     well = str_sub(WellID, start = -2),
     # Replace 'W' in the well portion
@@ -30,16 +18,16 @@ particle_count <- particle_count |>
   group_by(ParticleID) |>
   distinct(ParticleLength, ParticleWidth, .keep_all = TRUE)
 
-# weird particle count row SFEI_01_S15_040
-particle_count <- particle_count |>
-  mutate(ParticleID =
-           case_when(
-             ParticleID == "SFEI_01_S15_00 " ~ "SFEI_01_S15_040",
-             TRUE ~ ParticleID
-           ))
+# # weird particle count row SFEI_01_S15_040
+# particle_count <- particle_count |>
+#   mutate(ParticleID =
+#            case_when(
+#              ParticleID == "SFEI_01_S15_00 " ~ "SFEI_01_S15_040",
+#              TRUE ~ ParticleID
+#            ))
 
 # Full Particle analyzed ----
-full_particle <- full_particle |>
+full_particle2 <- full_particle |>
   mutate(
     ParticleID = str_extract(file_name, "^((?:[^_]+_){3}[^_]+)"),
     shape = str_match(file_name, "^(?:[^_]+_){4}([^_]+)")[, 2],
@@ -65,7 +53,7 @@ full_particle <- full_particle |>
            ))
 
 
-full_particle1 <- full_particle |>
+full_particle3 <- full_particle2 |>
   mutate(
     color =
       case_when(
@@ -86,7 +74,7 @@ full_particle1 <- full_particle |>
   )
 
 # Merge tables ----
-merged_data <- left_join(particle_count, full_particle, by = "ParticleID")
+merged_data <- left_join(particle_count2, full_particle3, by = "ParticleID")
 
 # Filter rows with NA value
 merged_data <- merged_data |>
@@ -111,9 +99,8 @@ dupes_df <- merged_data |>
 # Recombine non duplicated and modified duplicated data
 fragment_data <- rbind(df_1, dupes_df)
 
-
 # Identify missing samples form particle_count
-missing <- anti_join(particle_count, fragment_data)
+missing <- anti_join(particle_count2, fragment_data)
 
 # Decided to keep the missing but add a note for missing ***
 missing <- missing |>
@@ -220,10 +207,6 @@ write.csv(fragment_data1,
 
 
 # ----------------------------- Multiplier ------------------------------------
-multiplier <- readxl::read_xlsx("data_cleaning/data/SFEI_01_Multiplier.xlsx", sheet = "Fragments_Fibers") |>
-  clean_names()
-
-
 # Multiplier by sample
 # By each sample estimate of total particles found
 # total of each type with the multiplier

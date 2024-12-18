@@ -1,13 +1,3 @@
-library(tidyverse)
-library(readxl)
-library(dplyr)
-library(janitor)
-
-# Data
-labguru_df <- read_xlsx("data/SFEI_01 LabGuruSampleWorksheet.xlsx", sheet = 1) |> 
-  clean_names()
-
-
 # Extract distinct sieves used as a string---
 sieves <- labguru_df |> 
   select(pre_filtered) |> 
@@ -128,7 +118,7 @@ volume_added <-labguru_df |>
 # MIPPR Procedual blanks
 # plastic_summary_all for this
 mippr_pb <- MIPPR_breakdown |> 
-  filter(str_detect(sample_name, "MIPPR_PB_15N0V24")) |> 
+  filter(str_detect(sample_name, "_PB_")) |> 
   group_by(material_class) |> 
   summarize(count = sum(count)) |> 
   mutate(percent = (round(count/sum(count) * 100, 1))) |> 

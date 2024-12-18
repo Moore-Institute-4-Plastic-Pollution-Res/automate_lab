@@ -1,13 +1,3 @@
-library(tidyverse)
-library(readxl)
-library(openxlsx)
-library(janitor)
-
-# Read and merge spreadsheets
-fiber_data <- loadWorkbook("data_cleaning/data/SFEI_01_FIBER_Meas.xlsx")
-
-multiplier <- readxl::read_xlsx("data_cleaning/data/SFEI_01_Multiplier.xlsx", sheet = "Fragments_Fibers") |>
-  clean_names()
 
 # Load in fiber data and merge 
 df <- fiber_data$sheet_names |> 
@@ -23,7 +13,7 @@ fiber_df <- df |>
         "^([^_]+_[^_]+)_(S|W)(\\d+)_.*", 
         "\\1_\\2\\3"
   )) |> 
-  filter(grepl("SFEI", sample_id)) |> 
+  filter(grepl(project_name, sample_id)) |> 
 # Variation of Fiber Polymer Type 
   mutate(FiberPolymerType =
            case_when(
