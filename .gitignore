@@ -1,11 +1,14 @@
 # History files
 .Rhistory
 .Rapp.history
+.DS_Store
+.venv/
 # Session Data files
 .RData
 .RDataTmp
 # User-specific files
 .Ruserdata
+MicroplasticsReport.Rmd
 # Example code in package build process
 *-Ex.R
 # Output files from R CMD build
@@ -35,3 +38,9 @@ po/*~
 rsconnect/
 .secrets/
 data/
+www/
+data_cleaning/fiber_data
+data_cleaning/filter_500um
+data_cleaning/final
+data_cleaning/SFEI_01_Multiplier.xlsx
+data_cleaning/fragment_data/
