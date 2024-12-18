@@ -387,21 +387,25 @@ true_values$`Size Accuracy` |> sd(na.rm = T) / true_values$`Size Accuracy` |> me
 ##PMMA_15Nov223_control, 109
 ##RedPETFibers_15Nov223_control, 44
 
-#Check results single map ----
+#Check results single map ---- to determine threshold
 map <- read_envi(
-  "C:\\Users\\winco\\OneDrive\\Documents\\Positive_Controls/RedBrick_21Nov2023_control.dat",
+    "data/SFEI_01/Raw/MIPPR_PB_15NOV24.dat",
   spectral_smooth = T
 )
-map <- read_any("C:\\Users\\winco\\OneDrive\\Documents\\CSULB MP Analysis\\100-300_A_LT.rds")
+map <- read_any("data/SFEI_01/Result/MIPPR_LFB04_20AUG24_REDO.rds")
+
 map$metadata$sig <- sig_noise(map |> restrict_range(
-  min = c(750, 2700),
-  max = c(1800, 4000),
+  #removing CO2 region
+  min = c(750, 2420),
+  max = c(2200, 4000),
   make_rel = F
 ),
 metric = "sig_times_noise",
 abs = F)
 
-heatmap_spec(map, sn = map$metadata$sig)
+heatmap_spec(map, sn = map$metadata$sig, min_sn = 0.006) 
+
+hist(map$metadata$sig)
 
 plot(sample_spec(map, 1))
 

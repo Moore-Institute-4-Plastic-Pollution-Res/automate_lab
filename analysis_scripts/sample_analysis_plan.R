@@ -4,10 +4,7 @@ library(dplyr)
 library(janitor)
 
 # Data
-labguru_df <- read_xlsx("EXAMPLE_01 LabGuruSampleWorksheet.xlsx", sheet = 1) |> 
-  clean_names()
-
-labguru_df <- read_xlsx("JHENG_270_LabGuruSampleWorksheet.xlsx", sheet = 1) |> 
+labguru_df <- read_xlsx("data/SFEI_01 LabGuruSampleWorksheet.xlsx", sheet = 1) |> 
   clean_names()
 
 
@@ -46,15 +43,18 @@ digestion <- labguru_df |>
   drop_na() 
 
 # digestion concentration multiple option
-if (length(digestion$digestion_concentration) > 2){
+if (length(digestion$digestion_concentration) > 2) {
   max <- max(digestion$digestion_concentration)
   min <- min(digestion$digestion_concentration)
   solution <- unique(digestion$digestion_solution_composition)
+  digestion <- paste0(min * 100, "% to ", max * 100, "% ", solution)
+} else{
   digestion <- paste0(
-    min*100, "% to ",
-    max*100, "% ", solution
+    digestion$digestion_concentration * 100,
+    "% ",
+    digestion$digestion_solution_composition
   )
-} 
+}
 
 # digestion exception 
 digestion_exception <- labguru_df |> 
@@ -100,18 +100,65 @@ filter <- labguru_df |>
   select(filter_diameter, filter_pore_size) |> 
   distinct() |> 
   drop_na() |> 
-  mutate(value = paste0(filter_diameter, 
+  mutate(
+    filter_pore_size = str_replace_all(filter_pore_size, "u", "µ"),
+    value = paste0(filter_diameter, 
                         " stainless steel filters with ", 
                         filter_pore_size)) |> 
   pull(value)
 
 # added volume for sieving
 volume_added <-labguru_df |> 
-  select(SampleID, `Volume solution added`)
+  select(sample_id, volume_solution_added) |> 
+  filter(!str_detect(sample_id, "MIPPR")) |> 
+  distinct(volume_solution_added) |> 
+  separate(
+    volume_solution_added,
+    into = c("a", "b","c","d", "e", "f", "g"),
+    sep = " "
+  ) |> 
+  mutate(
+    value = paste(a, b, "of", c, "and", e, f, "of", g)
+  ) |> 
+  pull(value)
+
+## ------------------------- QA/QC --------------------------
+
+# Procedural Blank
+# MIPPR Procedual blanks
+# plastic_summary_all for this
+mippr_pb <- MIPPR_breakdown |> 
+  filter(str_detect(sample_name, "MIPPR_PB_15N0V24")) |> 
+  group_by(material_class) |> 
+  summarize(count = sum(count)) |> 
+  mutate(percent = (round(count/sum(count) * 100, 1))) |> 
+  arrange(desc(percent))
+
+
+# LFB table prep - assuming one LFB present
+mippr_lfb <- MIPPR_breakdown |>
+  filter(str_detect(sample_name, "LFB")) |> 
+  group_by(material_class) |>
+  summarize(count = sum(count)) |> 
+  mutate(type_of_plastic = 
+           case_when(
+             material_class == "poly(ethylene)" | 
+               material_class == "poly(propylene)" ~ "Polyolefins"
+           )
+           ) |> 
+  group_by(type_of_plastic) |> 
+  summarize(count = sum(count))
+
+
+lfb <- read.csv("data/LFB_Counts.csv") |> 
+  select(-sample_id) |> 
+  rename(`Pre-Count` = Count,
+         `Type of Plastic` = Type,
+         `Size Class` = Size
+         ) |> 
+  clean_names()
 
 
 
-
-  
 
 

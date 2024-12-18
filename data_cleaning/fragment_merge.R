@@ -5,10 +5,10 @@ library(readxl)
 
 # Read in data
 particle_count <- read.csv(
-  "data_cleaning/fragment_data/SFEI_01_ParticleCount - Fragment Data.csv",
+  "data_cleaning/data/SFEI_01_ParticleCount - Fragment Data.csv",
   na.strings = c("", "NA")
 )
-full_particle <- read.csv("data_cleaning/fragment_data/SFEI_full_particle_results.csv")
+full_particle <- read.csv("data_cleaning/data/SFEI_full_particle_results.csv")
 
 #--------------Merging Particle Count and Fragment Analysis Results--------------
 # Particle Count ----
@@ -216,11 +216,11 @@ unique(fragment_data1$ParticleColor)
 unique(fragment_data1$ParticleShape)
 
 write.csv(fragment_data1,
-          "data_cleaning/fragment_data/SEI_fragment_data_full_final.csv")
+          "data_cleaning/final/SFEI_fragment_data_full_final.csv")
 
 
 # ----------------------------- Multiplier ------------------------------------
-multiplier <- read_xlsx("data_cleaning/SFEI_01_Multiplier.xlsx", sheet = "Fragments_Fibers") |>
+multiplier <- readxl::read_xlsx("data_cleaning/data/SFEI_01_Multiplier.xlsx", sheet = "Fragments_Fibers") |>
   clean_names()
 
 
@@ -245,8 +245,7 @@ plastics_total <- fragment_data1 |>
   filter(!(
     material_class %in% c(
       "mineral",
-      "organic matter",
-      "cellulose derivatives (ether cellulose)"
+      "organic matter"
     )
   ), !is.na(ParticleShape)) |>
   group_by(SampleID) |>
@@ -259,15 +258,14 @@ plastics_breakdown <- fragment_data1 |>
   filter(!(
     material_class %in% c(
       "mineral",
-      "organic matter",
-      "cellulose derivatives (ether cellulose)"
+      "organic matter"
     )
   ), !is.na(ParticleShape)) |>
   group_by(SampleID) |>
   summarize(count_plastic = n()) |>
   clean_names()
 
-plastics_df <- left_join(plastics_total, plastics_breakdown) |>
+fragment_particle_count <- left_join(plastics_total, plastics_breakdown) |>
   left_join(multiplier) |>
   select(-proportions_of_sample) |>
   mutate(across(.cols = where(is.numeric) &
@@ -279,12 +277,11 @@ plastics_df <- left_join(plastics_total, plastics_breakdown) |>
   rename(SampleID = sample_id, "Particle Count" = count_plastic) 
 
 # Particle count by polymer
-plastics_breakdown <- fragment_data1 |>
+fragment_breakdown <- fragment_data1 |>
   filter(!(
     material_class %in% c(
       "mineral",
-      "organic matter",
-      "cellulose derivatives (ether cellulose)"
+      "organic matter"
     )
   ), !is.na(ParticleShape)) |>
   group_by(SampleID, material_class) |>
@@ -300,8 +297,3 @@ plastics_breakdown <- fragment_data1 |>
   group_by(material_class) |>
   summarize(count = sum(count)) |> 
   mutate(count = floor(count))
-
-write.csv(plastics_df,
-          "data_cleaning/final/SFEI_fragment_plastic_count.csv")
-write.csv(plastics_breakdown,
-          "data_cleaning/final/SFEI_fragment_polymer_count.csv")
