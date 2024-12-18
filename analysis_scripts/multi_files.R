@@ -5,7 +5,7 @@ library(mmand)
 library(magick)
 library(cluster)
 library(googledrive)
-
+library(tidyverse)
 
 #Set a folder to save data locally ---
 local_store <- file.path("data",project_name)
@@ -36,7 +36,7 @@ analyze_features <- function(project_name,
                              sigma2 = c(3, 3),
                              close = F,
                              close_kernel = c(4, 4),
-                             sn_threshold = 0.01,
+                             sn_threshold = 0.006,
                              cor_threshold = 0.7,
                              area_threshold = 1,
                              label_unknown = F,
@@ -70,43 +70,39 @@ analyze_features <- function(project_name,
 ) {
   
   # Find spectra files
-  # data_search <- shared_drive_find("Project") |> 
-  #   drive_ls("Customer Projects") |> 
-  #   drive_ls() |> 
-  #   filter(name %in% project_name) |> 
-  #   drive_ls(folder) |> 
-  #   drive_ls()
-  
-  data_search <- shared_drive_find("Project") |> 
-    drive_ls("Customer Projects") |> 
-    drive_ls() |> 
-    filter(name %in% project_name) |> 
-    drive_ls("JHENG_270") |> 
-    drive_ls("JHENG270") |> 
-    drive_ls(folder) |> 
+  data_search <- shared_drive_find("Project") |>
+    drive_ls("Customer Projects") |>
+    drive_ls() |>
+    filter(name %in% map(strsplit(project_name, split = "_"),1)) |>
+    drive_ls() |>
+    filter(name %in% project_name) |>
+    drive_ls("Filters_20um iN10 Data") |>
+    drive_ls(folder) |>
     drive_ls()
-  
+
+
   # Delimit file names to group
-  data_temp <- data_search |> 
-    mutate(temp_name = name) |> 
-    separate(col = temp_name, into = c("name_new", "file"), sep = "[.]") |> 
+  data_temp <- data_search |>
+    filter(grepl("dat|hdr|JPG", name)) |>
+    mutate(temp_name = name) |>
+    separate(col = temp_name, into = c("name_new", "file"), sep = "[.]") |>
     distinct(name, .keep_all = TRUE)
-  
+
   missing_files <- character()
 
   # Identify missing files
   for (unique_name in unique(data_temp$name_new)){
-    
-    matching_files <- data_temp |> 
+
+    matching_files <- data_temp |>
       filter(name_new %in% unique_name)
-    # Here is where we check if all the necessary files are available 
+    # Here is where we check if all the necessary files are available
     # without downloading based on matching files
-    
+
     # Check if they are present
     hdr_present <- any(grepl(".hdr$", matching_files$name))
     dat_present <- any(grepl(".dat$", matching_files$name))
     img_present <- any(grepl("\\.jpg$|\\.JPG$", matching_files$name))
-    
+
     # Skip and log if any required file is missing
     if (!hdr_present || !dat_present || !img_present) {
       missing_files <- c(missing_files, unique_name)
@@ -116,7 +112,7 @@ analyze_features <- function(project_name,
           if(!img_present) "missing image file (.JPG).\n")
     }
   }
-  
+
   # Stop if the missing files list is not empty
   if (length(missing_files) > 0){
     stop("Missing files")
@@ -124,16 +120,16 @@ analyze_features <- function(project_name,
 
     # Group files by name, download, and do analysis
   for (unique_name in unique(data_temp$name_new)){
-    
-    matching_files <- data_temp |> 
+
+    matching_files <- data_temp |>
       filter(name_new %in% unique_name)
-  
-    # Create temp file 
+
+    # Create temp file
     if (dir.exists(local_store_raw)){
       unlink(local_store_raw, recursive = TRUE)
     }
     dir.create(local_store_raw, recursive = TRUE)
-    
+
     # Download every file in the grouped matching file pairs ---
     for (file in 1:nrow(matching_files)) {
       tryCatch({
@@ -951,27 +947,28 @@ analyze_features <- function(project_name,
       ), fill = T),
       paste0(wd, "/median_spec_all.csv"))
     }
+  
     # Export files ----
     # Find id of Project folder
-    # folder_id <- shared_drive_find("Project") |>
-    #   drive_ls("Customer Projects") |>
-    #   drive_ls() |>
-    #   filter(name == project_name) |>
-    #   drive_ls() |>
-    #   filter(name == "Export_Files") |>
-    #   pull(id)
-    # 
+    folder_id <- shared_drive_find("Project") |>
+      drive_ls("Customer Projects") |>
+      drive_ls() |>
+      filter(name %in% map(strsplit(project_name, split = "_"),1)) |>
+      drive_ls() |>
+      filter(name %in% project_name) |>
+      drive_ls("Filters_20um iN10 Data") |>
+      drive_ls() |>
+      filter(name %in% folder) |>
+      pull(id)
+
     # Create new folder
-    
-    folder_id <- "1M8c8RXsk5ayeINRsP36FAWHB-7I2Zej7"
-    
     new_folder <- drive_mkdir("Spectral_Results",
                               path = as_id(folder_id),
                               overwrite = TRUE
                               )
     # Upload files
     # Send data up to drive
-    wd <-file.path("data/JHENG/Results")
+    # wd <-file.path("data/JHENG/Results")
     data_upload <- list.files(wd)
 
     for (file in data_upload){
@@ -981,8 +978,8 @@ analyze_features <- function(project_name,
       )
 
     }
-    
-  }
+
+  
 }
 
 # Run analysis ----
@@ -998,7 +995,7 @@ analyze_features(project_name = project_name,
                  #spatial_smooth = ,
                  close = F,
                  adj_map_baseline = F, 
-                 sn_threshold = 0.01, #0.01 the lowest signal considered "particles"
+                 sn_threshold = 0.006, #0.01 the lowest signal considered "particles"
                  cor_threshold = 0.66, #the lowest level you would consider something known
                  area_threshold = 1, #to remove artifacts from background. 
                  label_unknown = F, #whether to scrub information when below correlation threshold.
@@ -1026,3 +1023,4 @@ analyze_features(project_name = project_name,
                  width = 1000, 
                  height = 1000, 
                  units = "px")
+
