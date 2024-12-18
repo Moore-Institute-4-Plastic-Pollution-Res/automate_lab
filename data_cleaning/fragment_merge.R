@@ -5,10 +5,10 @@ library(readxl)
 
 # Read in data
 particle_count <- read.csv(
-  "data_cleaning/data/SFEI_01_ParticleCount - Fragment Data.csv",
+  "data_cleaning/data/ParticleCount - Fragment Data.csv",
   na.strings = c("", "NA")
 )
-full_particle <- read.csv("data_cleaning/data/SFEI_full_particle_results.csv")
+full_particle <- read.csv("data_cleaning/data/full_particle_results.csv")
 
 #--------------Merging Particle Count and Fragment Analysis Results--------------
 # Particle Count ----
@@ -30,13 +30,14 @@ particle_count <- particle_count |>
   group_by(ParticleID) |>
   distinct(ParticleLength, ParticleWidth, .keep_all = TRUE)
 
-# weird particle count row SFEI_01_S15_040
-particle_count <- particle_count |>
-  mutate(ParticleID =
-           case_when(
-             ParticleID == "SFEI_01_S15_00 " ~ "SFEI_01_S15_040",
-             TRUE ~ ParticleID
-           ))
+# weird particle count row -- hard coded
+# particle_count <- particle_count |>
+#   mutate(ParticleID =
+#            case_when(
+#              grepl("_01_S15_00 ", ParticleID) ~
+#                str_replace_all(ParticleID, "_01_S15_00 ", "_01_S15_040"),
+#              TRUE ~ ParticleID
+#            ))
 
 # Full Particle analyzed ----
 full_particle <- full_particle |>
@@ -117,7 +118,14 @@ missing <- anti_join(particle_count, fragment_data)
 
 # Decided to keep the missing but add a note for missing ***
 missing <- missing |>
-  mutate(Notes = "did not analyze")
+  mutate(Notes = 
+           case_when(
+             !grepl("MIPPR", SampleID) ~ "did not analyze",
+             TRUE ~ Notes
+             )
+  )
+
+
 
 fragment_data <- rbind(fragment_data, missing)
 
@@ -198,29 +206,30 @@ fragment_data1 <- fragment_data1 |>
     ParticleColor =
       case_when(
         grepl("FLM3", ParticleColor) ~ "White",
-        grepl("SFEI_01_S15_066", ParticleID) ~ "Orange",
+        grepl("01_S15_066", ParticleID) ~ "Orange",
         grepl("corr", ParticleColor) ~ NA,
         TRUE ~ ParticleColor
       ),
     ParticleShape =
       case_when(
-        grepl("SFEI_01_S15_066", ParticleID) ~ "Fragment",
+        grepl("01_S15_066", ParticleID) ~ "Fragment",
         TRUE ~ ParticleShape
       )
   ) |>
-  select(-dupes)  |>
-  # match_val > 0.6
-  filter(match_val > 0.6)
+  select(-dupes) 
+
+write.csv(fragment_data1,
+          "data_cleaning/final/fragment_data_full_final.csv")
+
+
 
 unique(fragment_data1$ParticleColor)
 unique(fragment_data1$ParticleShape)
 
-write.csv(fragment_data1,
-          "data_cleaning/final/SFEI_fragment_data_full_final.csv")
 
 
 # ----------------------------- Multiplier ------------------------------------
-multiplier <- readxl::read_xlsx("data_cleaning/data/SFEI_01_Multiplier.xlsx", sheet = "Fragments_Fibers") |>
+multiplier <- readxl::read_xlsx("data_cleaning/data/Multiplier.xlsx", sheet = "Fragments_Fibers") |>
   clean_names()
 
 
@@ -228,6 +237,7 @@ multiplier <- readxl::read_xlsx("data_cleaning/data/SFEI_01_Multiplier.xlsx", sh
 # By each sample estimate of total particles found
 # total of each type with the multiplier
 fragment_total <- fragment_data1 |>
+  filter(match_val > 0.6) |> 
   group_by(SampleID, ParticleShape) |>
   summarize(count = n()) |>
   pivot_wider(names_from = ParticleShape, values_from = count) |>
@@ -238,7 +248,6 @@ fragment_total <- fragment_data1 |>
                   subsample_ratio)/multiplier)) |>
   select(-multiplier) |>
   mutate(total_count = rowSums(across(everything()), na.rm = TRUE))
-
 
 # count of plastics
 plastics_total <- fragment_data1 |>
