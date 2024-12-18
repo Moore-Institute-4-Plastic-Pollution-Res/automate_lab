@@ -4,9 +4,9 @@ library(openxlsx)
 library(janitor)
 
 # Read and merge spreadsheets
-fiber_data <- loadWorkbook("data_cleaning/fiber_data/SFEI_01_FIBER_Meas.xlsx")
+fiber_data <- loadWorkbook("data_cleaning/data/SFEI_01_FIBER_Meas.xlsx")
 
-multiplier <- readxl::read_xlsx("data_cleaning/SFEI_01_Multiplier.xlsx", sheet = "Fragments_Fibers") |>
+multiplier <- readxl::read_xlsx("data_cleaning/data/SFEI_01_Multiplier.xlsx", sheet = "Fragments_Fibers") |>
   clean_names()
 
 # Load in fiber data and merge 
@@ -27,7 +27,7 @@ fiber_df <- df |>
 # Variation of Fiber Polymer Type 
   mutate(FiberPolymerType =
            case_when(
-             grepl("Cellulose", FiberPolymerType) ~ "Cellulose Derivative",
+             grepl("Cellulose", FiberPolymerType) ~ "Cellulose Derivative (Ether Cellulose)",
              grepl("Organic", FiberPolymerType) ~ "Organic",
              grepl("Polycrylon", FiberPolymerType) | grepl("Polyacry", FiberPolymerType) ~ 
                "Polyacrylonitrile",
@@ -66,38 +66,51 @@ fiber_type <- fiber_df |>
   mutate(
     total_count = rowSums(across(where(is.numeric)), na.rm = TRUE))
 
-fiber_type <- fiber_type |> 
+fiber_particle_count <- fiber_type |> 
   select(sample_id, Plastic) |> 
   mutate(Plastic = floor(Plastic)) |> 
   rename(SampleID = sample_id,
          "Particle Count" = Plastic
          ) 
 
-write.csv(fiber_type, "data_cleaning/final/SFEI_fiber_plastic_count.csv")    
-
-
 # Polymer type count
-fiber_breakdown <- fiber_df |> 
-  group_by(sample_id, FiberPolymerType) |> 
-  summarize(count = n()) |> 
-  left_join(multiplier) |> 
+fiber_breakdown <- fiber_df |>
+  group_by(sample_id, FiberPolymerType) |>
+  summarize(count = n()) |>
+  left_join(multiplier) |>
   mutate(across(
-    .cols = where(is.numeric) & !all_of(c("subsample_ratio","multiplier")),
-    ~ (.x/subsample_ratio)/multiplier)
-  ) |> 
-  select(-c(proportions_of_sample, multiplier)) |> 
-  group_by(FiberPolymerType) |> 
-  summarize(count = sum(count)) |> 
+    .cols = where(is.numeric) &
+      !all_of(c("subsample_ratio", "multiplier")),
+    ~ (.x / subsample_ratio) / multiplier
+  )) |>
+  select(-c(proportions_of_sample, multiplier)) |>
+  group_by(FiberPolymerType) |>
+  summarize(count = sum(count)) |>
   # remove non plastics
-  filter(!(FiberPolymerType %in% c("Cellulose Derivative", "Organic", "Unknown"))) |> 
+  filter(!(
+    FiberPolymerType %in% c("Organic", "Unknown")
+  )) |>
   # format polymer name as fragment polymer material class
-  mutate(FiberPolymerType = 
-           case_when(
-             grepl("Poly", FiberPolymerType) & !(str_detect(FiberPolymerType,"Polyvinylalcohols")) ~ 
-               str_replace(FiberPolymerType, "^Poly([A-Za-z]+)$", "poly(\\1)"),
-             TRUE ~ tolower(FiberPolymerType)
-           )
-           ) |> 
-  mutate(count = floor(count))
+  mutate(
+    FiberPolymerType =
+      case_when(
+        grepl("Poly", FiberPolymerType) &
+          !(str_detect(FiberPolymerType, "Polyvinylalcohols")) ~
+          str_replace(FiberPolymerType, "^Poly([A-Za-z]+)$", "poly(\\1)"),
+        TRUE ~ FiberPolymerType
+         )) |>
+  rename(material_class = FiberPolymerType)
 
-write.csv(fiber_breakdown, "data_cleaning/final/SFEI_fiber_polymer_count.csv")  
+# Hard coded changes
+fiber_breakdown <- fiber_breakdown |> 
+  mutate(material_class = 
+           case_when(
+             material_class == "poly(ester)" ~ 
+               "poly(esters/ethers/diglycidylethers/terephthalates)s",
+             material_class == "poly(acrylonitrile)" ~
+               "polyacrylonitriles (nitriles)",
+             TRUE ~ material_class
+           ),
+         count = floor(count),
+         material_class = tolower(material_class)
+           )

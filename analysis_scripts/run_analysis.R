@@ -25,13 +25,13 @@ folder_find <- shared_drive_find("Project") |>
   drive_ls()
 
 # Single project with the customer name
-folder_find <- shared_drive_find("Project") |>
-  drive_ls("Customer Projects") |>
-  drive_ls() |>
-  filter(name %in% project_name) |>
-  drive_ls("JHENG_270") |>
-  drive_ls("JHENG270") |>
-  drive_ls()
+# folder_find <- shared_drive_find("Project") |>
+#   drive_ls("Customer Projects") |>
+#   drive_ls() |>
+#   filter(name %in% project_name) |>
+#   drive_ls("JHENG_270") |>
+#   drive_ls("JHENG270") |>
+#   drive_ls()
 
 # Determine whether to conduct individual files (.SPA) or multi file (.hdr/.dat/.jpg) or both analysis
 if (any(grepl("Particle_500um", folder_find$name))) {
@@ -45,4 +45,8 @@ if (any(grepl("Particle_500um", folder_find$name))) {
 
 
 # Generate report
+# source file
+source("data_cleaning/data_merge.R")
+source("analysis_scripts/sample_analysis_plan.R")
+
 rmarkdown::render("MicroplasticsReport.Rmd", output_format = "all")
