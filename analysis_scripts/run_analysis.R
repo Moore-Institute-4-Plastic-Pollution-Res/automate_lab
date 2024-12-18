@@ -43,4 +43,4 @@ source("analysis_scripts/sample_analysis_plan.R")
 
 rmarkdown::render(input = "MicroplasticsReport.Rmd", output_file = 
                     paste0(project_name,"_Report"),
-                  output_format = "all")
+                  output_format = "word_document")

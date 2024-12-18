@@ -2,6 +2,7 @@
 title: "Analysis Report"
 output:
   word_document: default
+  reference_docx: reference.docx
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 ---
 
