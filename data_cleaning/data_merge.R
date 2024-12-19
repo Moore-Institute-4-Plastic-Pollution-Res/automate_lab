@@ -1,11 +1,11 @@
 # Merge plastic count data for fragment, fiber, and filter 
 # Read in data
 source("data_cleaning/fragment_merge.R")
-source("data_cleaning/fiber_data.R")
+#source("data_cleaning/fiber_data.R")
 source("data_cleaning/filter_500.R")
 
 # Plastic count merge
-plastic_df <- rbind(fiber_particle_count, fragment_particle_count, filter_particle_count) 
+plastic_df <- rbind(individual_particle_count, filter_particle_count) 
 plastic_count <- plastic_df |> 
   filter(!str_detect(SampleID, "MIPPR")) |> 
   group_by(SampleID) |> 
@@ -13,7 +13,7 @@ plastic_count <- plastic_df |>
 
 # Merge polymer count data for fragment, fiber, and filter ----
 # Read in data
-polymer_count <- rbind(fiber_breakdown, fragment_breakdown, filter_breakdown) |> 
+polymer_count <- rbind(individual_breakdown, filter_breakdown) |> 
   group_by(material_class) |> 
   summarize(count = sum(count)) |> 
   mutate(percent = round((count/(sum(count)) * 100),1)

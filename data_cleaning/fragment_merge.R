@@ -174,17 +174,20 @@ fragment_data1 <- fragment_data |>
              grepl("polypro", ParticlePolymerType, ignore.case = T) ~ "polypropylene",
              grepl("un", ParticlePolymerType, ignore.case = T) ~ "unknown",
              grepl("polyester|terephthalates", ParticlePolymerType, ignore.case = T) ~ "poly(esters/ethers/diglycidylethers/terephthalates)s",
+             is.na(ParticlePolymerType) ~ material_class,
              TRUE ~ ParticlePolymerType
            )
-  ) 
-
-
+  ) |>
+  mutate(match_val = ifelse(grepl("^F", WellID), 0.66, match_val)) |>
+  ungroup() |>
+  mutate(across(where(is.list), ~ purrr::map_chr(., toString))) |> # Converts lists to strings
+  select(SampleID, WellID, ParticleShape, ParticleColor, ParticlePolymerType, ParticleLength, ParticleWidth, SieveSizeRange, Notes, library_id, match_val)
 
 # Manual check colors and shape
 #Should add a test to the main code for this to double check things. 
 unique(fragment_data1$ParticleShape)
 unique(fragment_data1$ParticleColor)
-unique(fragment_data1$ParticlePolymerType)
+table(fragment_data1$ParticlePolymerType)
 
 write.csv(fragment_data1,
           "data/individual_data_full_final.csv", 
@@ -198,11 +201,14 @@ write.csv(fragment_data1,
 # Should we do this now or once at end?
 # Remove matches less than 0.6
 fragment_data1 <- fragment_data1 |>
+  filter(!(
+    material_class %in% c(
+      "mineral",
+      "organic matter"
+    )
+  ), !is.na(ParticleShape)) |>
   # match_val > 0.6
   filter(match_val > 0.6)
-
-unique(fragment_data1$ParticleColor)
-unique(fragment_data1$ParticleShape)
 
 fragment_total <- fragment_data1 |>
   group_by(SampleID, ParticleShape) |>
