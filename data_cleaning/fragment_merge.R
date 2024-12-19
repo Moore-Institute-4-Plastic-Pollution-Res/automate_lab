@@ -1,13 +1,12 @@
 
-#--------------Merging Particle Count and Fragment Analysis Results--------------
-# Particle Count ----
-particle_count2 <- particle_count |>
+particle_count1 <- particle_count |>
   mutate(
     # Replace characters in SampleID first
     SampleID = str_replace_all(SampleID, "-", "_"),
     SampleID = str_replace_all(SampleID, "W", "0"),
+    
     # Extract the last two characters from WellID
-    well = ifelse(!grepl("^F", WellID), str_sub(WellID, start = -2),  WellID),
+    well = str_sub(WellID, start = -2),
     # Replace 'W' in the well portion
     well = str_replace_all(well, "W", "0"),
     
@@ -18,8 +17,17 @@ particle_count2 <- particle_count |>
   group_by(ParticleID) |>
   distinct(ParticleLength, ParticleWidth, .keep_all = TRUE)
 
+# weird particle count row -- hard coded
+particle_count1 <- particle_count1 |>
+  mutate(ParticleID =
+           case_when(
+             grepl("_01_S15_00 ", ParticleID) ~
+               str_replace_all(ParticleID, "_01_S15_00 ", "_01_S15_040"),
+             TRUE ~ ParticleID
+           ))
+
 # Full Particle analyzed ----
-full_particle2 <- full_particle |>
+full_particle <- full_particle |>
   mutate(
     ParticleID = str_extract(file_name, "^((?:[^_]+_){3}[^_]+)"),
     shape = str_match(file_name, "^(?:[^_]+_){4}([^_]+)")[, 2],
@@ -45,28 +53,28 @@ full_particle2 <- full_particle |>
            ))
 
 
-#  full_particle3 <- full_particle2 #|>
-# #   mutate(
-# #     color =
-# #       case_when(
-# #         grepl("BlueBead", color) ~ "blue",
-# #         grepl("\\+BLU", shape) |
-# #           grepl("Bead", shape) | grepl("Blu", shape) ~ "BLU",
-# #         TRUE ~ color
-# #       ),
-# #     shape = case_when(
-# #       grepl("BlueBead", shape) | grepl("Blu", shape) ~ "Bead",
-# #       grepl("EMPTY", shape) |
-# #         grepl("Empty", shape) |
-# #         grepl("Background", shape) ~ NA_character_,
-# #       grepl("PET", shape) ~ "PET",
-# #       grepl("\\+BLU", shape) ~ "FRA",
-# #       TRUE ~ shape
-# #     )
-# #   )
+full_particle1 <- full_particle |>
+  mutate(
+    color =
+      case_when(
+        grepl("BlueBead", color) ~ "blue",
+        grepl("\\+BLU", shape) |
+          grepl("Bead", shape) | grepl("Blu", shape) ~ "BLU",
+        TRUE ~ color
+      ),
+    shape = case_when(
+      grepl("BlueBead", shape) | grepl("Blu", shape) ~ "Bead",
+      grepl("EMPTY", shape) |
+        grepl("Empty", shape) |
+        grepl("Background", shape) ~ NA_character_,
+      grepl("PET", shape) ~ "PET",
+      grepl("\\+BLU", shape) ~ "FRA",
+      TRUE ~ shape
+    )
+  )
 
 # Merge tables ----
-merged_data <- left_join(particle_count2, full_particle2, by = "ParticleID")
+merged_data <- left_join(particle_count1, full_particle, by = "ParticleID")
 
 # Filter rows with NA value
 merged_data <- merged_data |>
@@ -91,13 +99,20 @@ dupes_df <- merged_data |>
 # Recombine non duplicated and modified duplicated data
 fragment_data <- rbind(df_1, dupes_df)
 
+
 # Identify missing samples form particle_count
-missing <- anti_join(particle_count2, fragment_data, by = "ParticleID")
+missing <- anti_join(particle_count1, fragment_data)
 
 # Decided to keep the missing but add a note for missing ***
-# Good compromise here but also might want to flag these for a second look.
 missing <- missing |>
-  mutate(Notes = ifelse(!grepl("^F", WellID) & !grepl("MIPPR", SampleID), "did not analyze", "")) 
+  mutate(Notes = 
+           case_when(
+             !grepl("MIPPR", SampleID) ~ "did not analyze",
+             TRUE ~ Notes
+           )
+  )
+
+
 
 fragment_data <- rbind(fragment_data, missing)
 
@@ -118,90 +133,89 @@ color <- c(
 # particle shape
 particle_shape <- c("Fragment", "Sphere", "Rubbery Fragment")
 
+
 fragment_data1 <- fragment_data |>
   mutate(
     # orange
-    ParticleColor =
+    color =
       case_when(
-        grepl("^(YLO|ORA|GOLD|yellow)$", ParticleColor, ignore.case = T)  ~ "Orange",
-        # multi ParticleColor
-        str_count(ParticleColor, "_") > 1 |
-          grepl("MULTI", ParticleColor, ignore.case = T) ~ "MultiParticleColor (2+ colors)",
+        grepl("Ylo", color) | grepl("YLO", color) |
+          grepl("ORA", color) | grepl("GOLD", color) ~ "Orange",
+        # multi color
+        str_count(color, "_") > 1 |
+          grepl("MULTI", color) ~ "Multicolor (2+ colors)",
         #white
-        grepl("^(W|WHT|CLR|SLVR|GRY|clear)$", ParticleColor, ignore.case = T)  ~ "White",
+        grepl("W", color) | grepl("CLR", color) |
+          grepl("SLVR", color) | grepl("GRY", color) |
+          grepl("Gry", color) ~ "White",
         #Blue
-        grepl("^(BLU|Dk Blue|Blue)$", ParticleColor, ignore.case = T) ~ "Blue",
+        grepl("BLU", color) ~ "Blue",
         # Black
-        grepl("^(BLK|BLA)$", ParticleColor, ignore.case = T) ~ "Black",
+        grepl("BLK", color) |
+          grepl("Blk", color) | grepl("BLA", color) ~ "Black",
         # Brown
-        grepl("^(BRN|TAN)$", ParticleColor, ignore.case = T) ~ "Brown",
+        grepl("BRN", color) | grepl("TAN", color) ~ "Brown",
         # Green
-        grepl("^GRN$", ParticleColor, ignore.case = T) ~ "Green",
+        grepl("GRN", color) | grepl("Grn", color) ~ "Green",
         # Pink
-        grepl("^PNK$", ParticleColor, ignore.case = T) ~ "Pink",
+        grepl("PNK", color) | grepl("Pnk", color) ~ "Pink",
         # Red
-        grepl("^RED$", ParticleColor, ignore.case = T) ~ "Red",
-        TRUE ~ ParticleColor
+        grepl("RED", color) ~ "Red",
+        TRUE ~ color
       ),
     # Purple
     #shape
-    ParticleShape =
+    shape =
       case_when(
-        grepl("^(FRA|FLM|FOM|THN|CONG|LG|EMPTY|FB|FML|COMG|XL)$", 
-              ParticleShape, ignore.case = T)  ~ "Fragment",
-        grepl("^SPH$", 
-              ParticleShape, ignore.case = T) ~ "Sphere",
-        grepl("^(FBR|FIBER)$", 
-              ParticleShape, ignore.case = T) & !grepl("^F", WellID) ~ "Fiber Bundle",
-        TRUE ~ ParticleShape
-      )
-  ) |> 
-  mutate(ParticlePolymerType = tolower(ParticlePolymerType),
-         ParticlePolymerType = 
-           case_when(
-             grepl("cellulose", ParticlePolymerType, ignore.case = T) ~ "cellulose derivative (ether cellulose)",
-             grepl("organic", ParticlePolymerType, ignore.case = T) ~ "organic matter",
-             grepl("(polycrylon|polya)", ParticlePolymerType, ignore.case = T) ~ 
-               "polyacrylonitrile",
-             grepl("polypro", ParticlePolymerType, ignore.case = T) ~ "polypropylene",
-             grepl("un", ParticlePolymerType, ignore.case = T) ~ "unknown",
-             grepl("polyester|terephthalates", ParticlePolymerType, ignore.case = T) ~ "poly(esters/ethers/diglycidylethers/terephthalates)s",
-             is.na(ParticlePolymerType) ~ material_class,
-             TRUE ~ ParticlePolymerType
-           )
-  ) |>
-  mutate(match_val = ifelse(grepl("^F", WellID), 0.66, match_val)) |>
-  ungroup() |>
-  mutate(across(where(is.list), ~ purrr::map_chr(., toString))) |> # Converts lists to strings
-  select(SampleID, WellID, ParticleShape, ParticleColor, ParticlePolymerType, ParticleLength, ParticleWidth, SieveSizeRange, Notes, library_id, match_val)
+        grepl("FRA", shape) | grepl("Fra", shape) |
+          grepl("FLM", shape) | grepl("FOM", shape) |
+          grepl("THN", shape) | grepl("CONG", shape) |
+          grepl("LG", shape) | grepl("Empty", shape) |
+          grepl("FB", shape) | grepl("FML", shape) |
+          grepl("COMG", shape) |
+          grepl("XL", shape) ~ "Fragment",
+        grepl("SPH", shape) ~ "Sphere",
+        TRUE ~ shape
+      ),
+    ParticleShape =
+      case_when(is.na(ParticleShape) ~ shape, TRUE ~ ParticleShape),
+    ParticleColor =
+      case_when(is.na(ParticleColor) ~ color, TRUE ~ ParticleColor)
+  )
+
+unique(fragment_data1$shape)
+unique(fragment_data1$color)
 
 # Manual check colors and shape
-#Should add a test to the main code for this to double check things. 
-unique(fragment_data1$ParticleShape)
+# FLM3
+fragment_data1 <- fragment_data1 |>
+  mutate(
+    ParticleColor =
+      case_when(
+        grepl("FLM3", ParticleColor) ~ "White",
+        grepl("01_S15_066", ParticleID) ~ "Orange",
+        grepl("corr", ParticleColor) ~ NA,
+        TRUE ~ ParticleColor
+      ),
+    ParticleShape =
+      case_when(
+        grepl("01_S15_066", ParticleID) ~ "Fragment",
+        TRUE ~ ParticleShape
+      )
+  ) |>
+  select(-dupes) %>% 
+  mutate(ParticleShape = shape,
+         ParticleColor = color)
+
+
+
 unique(fragment_data1$ParticleColor)
-table(fragment_data1$ParticlePolymerType)
-
-write.csv(fragment_data1,
-          "data/individual_data_full_final.csv", 
-          row.names = F)
+unique(fragment_data1$ParticleShape)
 
 
-# ----------------------------- Multiplier ------------------------------------
 # Multiplier by sample
 # By each sample estimate of total particles found
 # total of each type with the multiplier
-# Should we do this now or once at end?
-# Remove matches less than 0.6
-fragment_data1 <- fragment_data1 |>
-  filter(!(
-    material_class %in% c(
-      "mineral",
-      "organic matter"
-    )
-  ), !is.na(ParticleShape)) |>
-  # match_val > 0.6
-  filter(match_val > 0.6)
-
 fragment_total <- fragment_data1 |>
   filter(match_val > 0.6) |> 
   group_by(SampleID, ParticleShape) |>
@@ -209,9 +223,8 @@ fragment_total <- fragment_data1 |>
   pivot_wider(names_from = ParticleShape, values_from = count) |>
   clean_names() |>
   left_join(multiplier) |>
-  #select(-proportions_of_sample) |>
   mutate(across(.cols = where(is.numeric) & !all_of(c("subsample_ratio","multiplier")), ~ (.x /
-                  subsample_ratio)/multiplier)) |>
+                                                                                             subsample_ratio)/multiplier)) |>
   select(-multiplier) |>
   mutate(total_count = rowSums(across(everything()), na.rm = TRUE))
 
@@ -242,11 +255,10 @@ plastics_breakdown <- fragment_data1 |>
 
 fragment_particle_count <- left_join(plastics_total, plastics_breakdown) |>
   left_join(multiplier) |>
-  select(-proportions_of_sample) |>
   mutate(across(.cols = where(is.numeric) &
                   !all_of(c("subsample_ratio","multiplier")), ~ (.x /
-                  subsample_ratio)/multiplier)
-         ) |>
+                                                                   subsample_ratio)/multiplier)
+  ) |>
   select(-c(multiplier, subsample_ratio)) |>
   mutate(count_plastic = floor(count_plastic)) |> 
   rename(SampleID = sample_id, "Particle Count" = count_plastic) 
@@ -268,7 +280,7 @@ fragment_breakdown <- fragment_data1 |>
     ~ (.x/subsample_ratio) / multiplier
   )
   ) |>
-  select(-c(multiplier, proportions_of_sample)) |>
+  select(-c(multiplier)) |>
   group_by(material_class) |>
   summarize(count = sum(count)) |> 
   mutate(count = floor(count))

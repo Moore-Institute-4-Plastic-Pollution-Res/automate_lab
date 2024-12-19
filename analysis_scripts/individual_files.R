@@ -32,9 +32,9 @@ data_search <- shared_drive_find("Project") |>
 
 # 
 #Set a folder to save data locally
-local_store_fragment <- file.path("data",project_name)
-local_store_raw_fragment <- file.path("data", project_name, "Raw_SPA", fsep = "/")
-local_store_results_fragment <- file.path("data", project_name, "Results_SPA", fsep = "/")
+local_store <- file.path("data",project_name)
+local_store_raw_fragment <- file.path("data", project_name, "Raw_fragment", fsep = "/")
+local_store_results_fragment <- file.path("data", project_name, "Results_fragment", fsep = "/")
 
 # Create folders ----
 

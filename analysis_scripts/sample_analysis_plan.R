@@ -123,10 +123,10 @@ mippr_pb <- MIPPR_breakdown |>
   group_by(material_class) |> 
   summarize(count = sum(count)) |> 
   mutate(percent = (round(count/sum(count) * 100, 1))) |> 
-  arrange(desc(percent))
+  arrange(desc(count))
 
 #LFB read in fragment data for PA66 - red beads
-pa66_data <- read.csv("data_cleaning/data/ParticleCount - Fragment Data.csv") |> 
+pa66_data <- particle_count %>% 
   filter(grepl("LFB", SampleID)) |> 
   group_by(SampleID) |> 
   summarize(pa66 = n()) |> 
@@ -154,7 +154,7 @@ mippr_lfb <- MIPPR_breakdown |>
   summarize(post_count = sum(count)) |> 
   mutate(type_of_plastic = str_to_title(type_of_plastic)) 
 
-lfb <- read_csv("data_cleaning/data/LFB_Counts.csv") |> 
+lfb <- read_csv(lfb_counts$local_path) |> 
   select(-sample_id) |> 
   rename(`Pre-Count` = Count,
          `Type of Plastic` = Type,
@@ -218,9 +218,9 @@ if (length(recover_na) > 1){
 }
 
 # Notes
-notes <- read.csv("data_cleaning/final/fragment_data_full_final.csv") |>
-  filter(!is.na(Notes)) |>
-  select(ParticleID, Notes) |>
+notes <- fragment_data1 |>
+  filter(!is.na(Notes) & trimws(Notes) != "") %>% 
+select(ParticleID, Notes) |>
   mutate(text = paste(ParticleID, Notes)) |>
   pull(text) |>
   paste(collapse = " and ")

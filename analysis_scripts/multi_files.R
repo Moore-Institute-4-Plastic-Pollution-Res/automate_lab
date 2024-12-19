@@ -1,17 +1,9 @@
-library(OpenSpecy)
-library(ggrepel)
-library(data.table)
-library(mmand)
-library(magick)
-library(cluster)
-library(googledrive)
-library(tidyverse)
 
 #Set a folder to save data locally ---
 local_store <- file.path("data",project_name)
-local_store_results <- file.path("data", project_name, "Results", fsep = "/")
+local_store_results <- file.path("data", project_name, "Results_filter", fsep = "/")
 # Set base directory of files downloaded and analyzed
-local_store_raw <- file.path("data", project_name, "Raw", fsep = "/")
+local_store_raw <- file.path("data", project_name, "Raw_filter", fsep = "/")
 
 
 # Create folders ----

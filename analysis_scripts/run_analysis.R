@@ -49,14 +49,15 @@ if (any(grepl("Particle_500um", folder_find$name))) {
 }
 
 # Cleanup Data ----
-aux_sheets <- list.files(path = "data", pattern = ".xlsx", full.names = T)
+source("data_cleaning/data_download.R")
+aux_sheets <- list.files(path = local_store, pattern = ".xlsx", full.names = T)
 # fiber_data <- readxl::read_xlsx(aux_sheets[grepl("LabGuruParticleCount", aux_sheets, ignore.case = T)], sheet = paste0(project_name, "_FIBER")) |> 
 #   clean_names()
 
 multiplier <- readxl::read_xlsx(aux_sheets[grepl("Multiplier", aux_sheets, ignore.case = T)], sheet = "Fragments_Fibers") |>
   clean_names()
 
-filter_data <- read_csv("data/filter_500_full_data.csv") #Is this created automatically?
+filter_data <- read_csv(file.path(local_store_results,"particle_details_all.csv")) #Is this created automatically?
 multiplier2 <- readxl::read_xlsx(aux_sheets[grepl("Multiplier", aux_sheets, ignore.case = T)], sheet = "Filter") |>
   clean_names() |> 
   mutate(sample_id = str_replace_all(sample_id, "O", "0"))
@@ -72,20 +73,23 @@ labguru_df <- read_xlsx(aux_sheets[grepl("LabGuruSampleWorksheet", aux_sheets, i
 #   filter(!is.na(mippr_sample_id)) |> 
 #   select(sfei_sample_id, mippr_sample_id)
 
-# Read in data
-full_particle <- read.csv(list.files("data", "full_particle_results.csv", full.names = T))
+# Read in fragment data
+full_particle <- read.csv(file.path(local_store_results_fragment, "full_particle_results.csv"),  na.strings = c("", "NA"))
 
-particle_count <- read_sheet("https://docs.google.com/spreadsheets/d/1o3uoS5JW6JDxa4UGNht3v5fVNtlY9z8s4T1z8c1kmwQ/edit?usp=sharing",
-                             sheet = project_name)
+particle_count <- read.csv(file.path(local_store,"particle_count.csv"))
 
 source("data_cleaning/data_merge.R")
 source("analysis_scripts/sample_analysis_plan.R")
 
-<<<<<<< HEAD
-# Generate report ----
-rmarkdown::render("MicroplasticsReport.Rmd", output_format = "all")
-=======
+
 rmarkdown::render(input = "MicroplasticsReport.Rmd", output_file = 
                     paste0(project_name,"_Report"),
-                  output_format = "word_document")
->>>>>>> 24ff5af715d2471eaae25043df0102723d946a4a
+                  output_format = word_document(reference_docx = "reference.docx"))
+
+
+
+rmarkdown::render(
+  input = "MicroplasticsReport.Rmd",
+  output_file = paste0(project_name, "_Report.docx"),
+  output_format = rmarkdown::word_document(reference_docx = "reference.docx")
+)

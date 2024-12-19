@@ -1,11 +1,11 @@
 # Merge plastic count data for fragment, fiber, and filter 
 # Read in data
 source("data_cleaning/fragment_merge.R")
-#source("data_cleaning/fiber_data.R")
+source("data_cleaning/fiber_data.R")
 source("data_cleaning/filter_500.R")
 
 # Plastic count merge
-plastic_df <- rbind(individual_particle_count, filter_particle_count) 
+plastic_df <- rbind(fiber_particle_count, fragment_particle_count, filter_particle_count) 
 plastic_count <- plastic_df |> 
   filter(!str_detect(SampleID, "MIPPR")) |> 
   group_by(SampleID) |> 
@@ -13,13 +13,18 @@ plastic_count <- plastic_df |>
 
 # Merge polymer count data for fragment, fiber, and filter ----
 # Read in data
-polymer_count <- rbind(individual_breakdown, filter_breakdown) |> 
+polymer_count <- 
+  rbind(fiber_breakdown, fragment_breakdown, filter_breakdown) |> 
   group_by(material_class) |> 
   summarize(count = sum(count)) |> 
   mutate(percent = round((count/(sum(count, na.rm = TRUE)) * 100),1)
-         ) |> 
-  arrange(desc(percent)) |> 
-  na.omit()
+  ) |> 
+  arrange(desc(count)) %>% 
+  mutate(
+    percent = 
+      case_when(percent == 0 ~ "< 0.1",
+                TRUE ~ as.character(percent))
+  )
 
 # Set MIPPR sample ID to actual project ID
 sampleid <- readxl::read_xlsx(file.path(lab_guru$local_path), sheet = "Sample Name and Subsamples") |>
@@ -39,4 +44,3 @@ plastic_count <- left_join(sampleid, plastic_count, by = c("mippr_sample_id" = "
 # rm(list = setdiff(ls(), vars_keep))
 
 # ** Need to find a better way to check for similarities of material class to group them
-
