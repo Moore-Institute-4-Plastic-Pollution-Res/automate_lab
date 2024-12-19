@@ -1,3 +1,4 @@
+
 # total count to then focus on the good spectra and plastics
 total_count <- filter_data |> 
   group_by(sample_id) |> 
@@ -5,7 +6,7 @@ total_count <- filter_data |>
 
 # good spectra and plastic
 total_plastic <- filter_data |>
-  filter(bad_spectra != "TRUE",
+  filter(
          max_cor_val >= 0.6,
          !(
            material_class %in% c(

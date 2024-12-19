@@ -8,7 +8,6 @@
 .RDataTmp
 # User-specific files
 .Ruserdata
-MicroplasticsReport.Rmd
 # Example code in package build process
 *-Ex.R
 # Output files from R CMD build
@@ -44,3 +43,5 @@ data_cleaning/filter_500um
 data_cleaning/final
 data_cleaning/SFEI_01_Multiplier.xlsx
 data_cleaning/fragment_data/
+data_cleaning/data
+reference.docx

@@ -37,14 +37,6 @@ folder_find <- shared_drive_find("Project") |>
   filter(name %in% project_name) |>
   drive_ls()
 
-# Single project with the customer name
-# folder_find <- shared_drive_find("Project") |>
-#   drive_ls("Customer Projects") |>
-#   drive_ls() |>
-#   filter(name %in% project_name) |>
-#   drive_ls("JHENG_270") |>
-#   drive_ls("JHENG270") |>
-#   drive_ls()
 
 # Determine whether to conduct individual files (.SPA) or multi file (.hdr/.dat/.jpg) or both analysis
 if (any(grepl("Particle_500um", folder_find$name))) {
@@ -89,5 +81,11 @@ particle_count <- read_sheet("https://docs.google.com/spreadsheets/d/1o3uoS5JW6J
 source("data_cleaning/data_merge.R")
 source("analysis_scripts/sample_analysis_plan.R")
 
+<<<<<<< HEAD
 # Generate report ----
 rmarkdown::render("MicroplasticsReport.Rmd", output_format = "all")
+=======
+rmarkdown::render(input = "MicroplasticsReport.Rmd", output_file = 
+                    paste0(project_name,"_Report"),
+                  output_format = "word_document")
+>>>>>>> 24ff5af715d2471eaae25043df0102723d946a4a

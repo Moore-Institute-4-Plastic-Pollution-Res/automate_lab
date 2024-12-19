@@ -978,8 +978,7 @@ analyze_features <- function(project_name,
       )
 
     }
-
-  
+}
 }
 
 # Run analysis ----

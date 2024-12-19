@@ -18,14 +18,6 @@ particle_count2 <- particle_count |>
   group_by(ParticleID) |>
   distinct(ParticleLength, ParticleWidth, .keep_all = TRUE)
 
-# # weird particle count row SFEI_01_S15_040
-# particle_count <- particle_count |>
-#   mutate(ParticleID =
-#            case_when(
-#              ParticleID == "SFEI_01_S15_00 " ~ "SFEI_01_S15_040",
-#              TRUE ~ ParticleID
-#            ))
-
 # Full Particle analyzed ----
 full_particle2 <- full_particle |>
   mutate(
@@ -105,7 +97,7 @@ missing <- anti_join(particle_count2, fragment_data, by = "ParticleID")
 # Decided to keep the missing but add a note for missing ***
 # Good compromise here but also might want to flag these for a second look.
 missing <- missing |>
-  mutate(Notes = ifelse(!grepl("^F", WellID), "did not analyze", "")) 
+  mutate(Notes = ifelse(!grepl("^F", WellID) & !grepl("MIPPR", SampleID), "did not analyze", "")) 
 
 fragment_data <- rbind(fragment_data, missing)
 
@@ -211,6 +203,7 @@ fragment_data1 <- fragment_data1 |>
   filter(match_val > 0.6)
 
 fragment_total <- fragment_data1 |>
+  filter(match_val > 0.6) |> 
   group_by(SampleID, ParticleShape) |>
   summarize(count = n()) |>
   pivot_wider(names_from = ParticleShape, values_from = count) |>
@@ -221,7 +214,6 @@ fragment_total <- fragment_data1 |>
                   subsample_ratio)/multiplier)) |>
   select(-multiplier) |>
   mutate(total_count = rowSums(across(everything()), na.rm = TRUE))
-
 
 # count of plastics
 plastics_total <- fragment_data1 |>
