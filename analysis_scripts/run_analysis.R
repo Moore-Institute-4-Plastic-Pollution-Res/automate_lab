@@ -8,7 +8,7 @@ library(openxlsx)
 library(dplyr)
 library(OpenSpecy) #If need dev. devtools::install_github("wincowgerDEV/OpenSpecy-package")
 library(googlesheets4)
-
+library(data.table)
 gs4_auth()
 
 # Ask User the name of the folder they want to access
@@ -56,7 +56,7 @@ aux_sheets <- list.files(path = "data", pattern = ".xlsx", full.names = T)
 multiplier <- readxl::read_xlsx(aux_sheets[grepl("Multiplier", aux_sheets, ignore.case = T)], sheet = "Fragments_Fibers") |>
   clean_names()
 
-filter_data <- read_csv("data/filter_500_full_data.csv") #Is this created automatically?
+filter_data <- read_csv("data/filter_500_full_data.csv") #Not currently the correct one. 
 multiplier2 <- readxl::read_xlsx(aux_sheets[grepl("Multiplier", aux_sheets, ignore.case = T)], sheet = "Filter") |>
   clean_names() |> 
   mutate(sample_id = str_replace_all(sample_id, "O", "0"))
@@ -81,11 +81,6 @@ particle_count <- read_sheet("https://docs.google.com/spreadsheets/d/1o3uoS5JW6J
 source("data_cleaning/data_merge.R")
 source("analysis_scripts/sample_analysis_plan.R")
 
-<<<<<<< HEAD
-# Generate report ----
-rmarkdown::render("MicroplasticsReport.Rmd", output_format = "all")
-=======
 rmarkdown::render(input = "MicroplasticsReport.Rmd", output_file = 
                     paste0(project_name,"_Report"),
                   output_format = "word_document")
->>>>>>> 24ff5af715d2471eaae25043df0102723d946a4a
