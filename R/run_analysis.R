@@ -15,7 +15,7 @@ gs4_auth()
 project_name <- readline(prompt = "Enter the Name of the Project: ")
 
 # Read in all functions
-lapply(list.files("R", full.names = TRUE), source)
+lapply(c("R/analyze_features.R", "R/get_lib.R", "R/determine_thresholds.R", "R/particle_image.R", "R/library_prep.R"), source)
 
 # Load library for analysis
 if(is(tryCatch(check_lib(c("derivative")),
@@ -27,15 +27,14 @@ if(is(tryCatch(check_lib(c("derivative")),
 lib <- OpenSpecy::load_lib("derivative") |> 
   filter_spec(lib$metadata$spectrum_type == "ftir")
 
-
 # Find folder names present in project folder - heavily dependent if it contains _ hyphen
 folder_find <- shared_drive_find("Project") |>
   drive_ls("Customer Projects") |>
   drive_ls() |>
-  filter(name %in% map(strsplit(project_name, split = "_"),1)) |>
-  drive_ls() |>
   filter(name %in% project_name) |>
-  drive_ls()
+  drive_ls() #|>
+  # filter(name %in% project_name) |>
+  # drive_ls()
 
 
 # Determine whether to conduct individual files (.SPA) or multi file (.hdr/.dat/.jpg) or both analysis
@@ -82,7 +81,6 @@ particle_count <- read_sheet("https://docs.google.com/spreadsheets/d/1o3uoS5JW6J
 
 ##Hardcoding fixes optional before analysis
 source("data/special_cleanup.R")
-
 source("data_cleaning/data_merge.R")
 source("analysis_scripts/sample_analysis_plan.R")
 
@@ -90,13 +88,22 @@ rmarkdown::render(input = "MicroplasticsReport.Rmd", output_file =
                     paste0(project_name,"_Report"),
                   output_format = "word_document")
 
-data_upload <- list.files(wd)
+#Upload all R code at end for reproducibility.
+folder_find <- shared_drive_find("Project") |>
+  drive_ls("Customer Projects") |>
+  drive_ls() |>
+  filter(name %in% project_name)
 
-for (file in data_upload){
-  
-  drive_upload(media = file.path(wd, file),
+new_folder <- drive_mkdir("RCode",
+                          path = as_id(folder_find$id),
+                          overwrite = TRUE
+)
+
+data_upload <- list.files(path = "R/", pattern = ".R", full.names = T)
+
+for(file in data_upload){
+  drive_upload(media = file.path(file),
                path = as_id(as.character(new_folder$id))
   )
-  
 }
 
