@@ -146,17 +146,12 @@ mippr_lfb <- confident_plastic |>
   summarize(post_count = sum(count)) |> 
   mutate(type_of_plastic = str_to_title(type_of_plastic)) 
 
-lfb <- read_csv("data_cleaning/data/LFB_Counts.csv") |> 
-  select(-sample_id) |> 
+lfb <- read_csv("data/LFB_Counts.csv") |> 
   rename(`Pre-Count` = Count,
          `Type of Plastic` = Type,
          `Size Class` = Size
          ) |> 
-  clean_names() |> 
-  mutate(type_of_plastic = str_replace_all(type_of_plastic,
-                                           "Red Bead", 
-                                           "Polyolefins")
-           ) 
+  clean_names()
 
 lfb_df <- left_join(lfb, mippr_lfb) |>
   mutate(

@@ -15,17 +15,17 @@ particle_count2 <- particle_count |>
     
     # Now create ParticleID with updated SampleID and well
     ParticleID = paste0(SampleID, "_0", well)
-  ) |>
-  filter(str_length(ParticleID) > 6) |>
-  group_by(ParticleID) |>
-  distinct(ParticleLength, ParticleWidth, .keep_all = TRUE)
+  ) #|>
+  #filter(str_length(ParticleID) > 6) |>
+  #group_by(ParticleID) |>
+  #distinct(ParticleLength, ParticleWidth, .keep_all = TRUE)
 
 # Full Particle analyzed ----
 full_particle2 <- full_particle |>
   mutate(
     ParticleID = str_extract(file_name, "^((?:[^_]+_){3}[^_]+)"),
-    shape = str_match(file_name, "^(?:[^_]+_){4}([^_]+)")[, 2],
-    color = str_match(file_name, "^(?:[^_]+_){5}([^.]+)")[, 2],
+    #shape = str_match(file_name, "^(?:[^_]+_){4}([^_]+)")[, 2],
+    #color = str_match(file_name, "^(?:[^_]+_){5}([^.]+)")[, 2],
     # If a tilde is present, extract the number after it, otherwise assign "10"
     dupes = case_when(
       str_detect(file_name, "~") ~ str_extract(file_name, "(?<=~)\\d+"),
@@ -51,7 +51,7 @@ merged_data <- left_join(particle_count2, full_particle2, by = "ParticleID")
 
 # Filter rows with NA value
 merged_data <- merged_data |>
-  filter(!is.na(file_name))
+  filter(!is_empty_or_na(file_name))
 
 # 'df' is your dataframe and 'col' is the column of interest
 dupes <- merged_data[duplicated(merged_data$ParticleID), ]
@@ -70,7 +70,7 @@ dupes_df <- merged_data |>
   filter(grepl("~", file_name) | grepl("REDO", file_name))
 
 # Recombine non duplicated and modified duplicated data
-fragment_data <- rbind(df_1, dupes_df)
+fragment_data <- bind_rows(df_1, dupes_df)
 
 # Identify missing samples form particle_count
 # Decided to keep the missing but add a note for missing ***
@@ -79,7 +79,7 @@ fragment_data <- rbind(df_1, dupes_df)
 missing <- anti_join(particle_count2, fragment_data, by = "ParticleID") |>
   mutate(Notes = ifelse(!grepl("^F", WellID) & !grepl("MIPPR", SampleID), "did not analyze", "")) 
 
-fragment_data <- rbind(fragment_data, missing)
+fragment_data <- bind_rows(fragment_data, missing)
 
 # Fill in particle shape and color ----
 # color
@@ -146,13 +146,13 @@ fragment_data1 <- fragment_data |>
              grepl("polypro", ParticlePolymerType, ignore.case = T) ~ "polypropylene",
              grepl("un", ParticlePolymerType, ignore.case = T) ~ "unknown",
              grepl("polyester|terephthalates", ParticlePolymerType, ignore.case = T) ~ "poly(esters/ethers/diglycidylethers/terephthalates)s",
-             is.na(ParticlePolymerType) ~ material_class,
+             is_empty_or_na(ParticlePolymerType) ~ material_class,
              TRUE ~ ParticlePolymerType
            )
   ) |>
-  mutate(match_val = ifelse(grepl("^F", WellID), 0.66, match_val)) |>
+  mutate(match_val = ifelse(is_empty_or_na(match_val), Correlation, match_val)) |>
+  mutate(match_val = ifelse(grepl("^F", WellID) & is_empty_or_na(match_val), 0.66, match_val)) |>
   ungroup() |>
-  mutate(across(where(is.list), ~ purrr::map_chr(., toString))) |> # Converts lists to strings
   select(SampleID, WellID, ParticleShape, ParticleColor, 
          ParticlePolymerType, ParticleLength, ParticleWidth,
          SieveSizeRange, Notes, library_id, match_val) |>
@@ -185,8 +185,8 @@ all_data <- bind_rows(filter_data |>
   mutate(count = 1) |>
   left_join(multiplier, by = "sample_id")|>
   left_join(multiplier2, by = c("sample_name" = "sample_id")) |>
-  mutate(sample_name = ifelse(is.na(sample_name), sample_id, sample_name)) |>
-  mutate(count = ifelse(is.na(area_um2), count / multiplier.x ,  count / multiplier.y))  
+  mutate(sample_name = ifelse(is_empty_or_na(sample_name), sample_id, sample_name)) |>
+  mutate(count = ifelse(is_empty_or_na(area_um2), count / multiplier.x ,  count / multiplier.y))  
 
 #Major client output
 fwrite(all_data, "full_particle_data.csv")
@@ -211,10 +211,7 @@ confident_plastic_nocontrol <- confident_plastic |>
 sample_plastic <- confident_plastic_nocontrol |>
   group_by(sample_name) |> 
   summarise(count = round(sum(count), 0)) |>
-  ungroup() |>
-  rename(SampleID = sample_name,
-         "Particle Count" = count
-  )
+  ungroup()    
 
 #assuming that the large and small particle multipliers have different IDs here. 
 material_plastic <- confident_plastic_nocontrol |>
@@ -222,6 +219,7 @@ material_plastic <- confident_plastic_nocontrol |>
   summarise(count = round(sum(count), 0)) |>
   ungroup()
 
+sum(material_plastic$count) == sum(sample_plastic$`Particle Count`)
 # clean environment
 # vars_keep <- c("plastic_count", "polymer_count", "MIPPR_breakdown", "filter_data", "project_name", "local_store_results")
 # rm(list = setdiff(ls(), vars_keep))

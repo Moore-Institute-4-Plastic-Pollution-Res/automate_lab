@@ -15,7 +15,7 @@ gs4_auth()
 project_name <- readline(prompt = "Enter the Name of the Project: ")
 
 # Read in all functions
-lapply(c("R/analyze_features.R", "R/get_lib.R", "R/determine_thresholds.R", "R/particle_image.R", "R/library_prep.R"), source)
+lapply(c("R/analyze_features.R", "R/naorempty.R", "R/get_lib.R", "R/determine_thresholds.R", "R/particle_image.R", "R/library_prep.R"), source)
 
 # Load library for analysis
 if(is(tryCatch(check_lib(c("derivative")),
@@ -39,12 +39,12 @@ folder_find <- shared_drive_find("Project") |>
 
 # Determine whether to conduct individual files (.SPA) or multi file (.hdr/.dat/.jpg) or both analysis
 if (any(grepl("Particle_500um", folder_find$name))) {
-  source("analysis_scripts/individual_files.R")
+  source("R/individual_files.R")
 } else if (any(grepl("Export_Files", folder_find$name))) {
-  source("analysis_scripts/multi_files.R")
+  source("R/multi_files.R")
 } else if (any(grepl("Particle_500um", folder_find$name)) | any(grepl("Export_Files", folder_find$name))) {
-  source("analysis_scripts/individual_files.R")
-  source("analysis_scripts/multi_files.R")
+  source("R/individual_files.R")
+  source("R/multi_files.R")
 }
 
 # Cleanup Data ----
@@ -77,12 +77,16 @@ labguru_df <- read_xlsx(aux_sheets[grepl("LabGuruSampleWorksheet", aux_sheets, i
 full_particle <- read.csv(list.files("data", "full_particle_results.csv", full.names = T))
 
 particle_count <- read_sheet("https://docs.google.com/spreadsheets/d/1o3uoS5JW6JDxa4UGNht3v5fVNtlY9z8s4T1z8c1kmwQ/edit?usp=sharing",
-                             sheet = project_name)
+                             sheet = project_name) %>%
+  mutate(across(where(is.list), ~ purrr::map_chr(., toString))) # Converts lists to strings
+  
 
 ##Hardcoding fixes optional before analysis
-source("data/special_cleanup.R")
-source("data_cleaning/data_merge.R")
-source("analysis_scripts/sample_analysis_plan.R")
+source("R/special_cleanup.R")
+#Merge datasets
+source("R/data_merge.R")
+#Extract control data and report metadata
+source("R/sample_analysis_plan.R")
 
 rmarkdown::render(input = "MicroplasticsReport.Rmd", output_file = 
                     paste0(project_name,"_Report"),
