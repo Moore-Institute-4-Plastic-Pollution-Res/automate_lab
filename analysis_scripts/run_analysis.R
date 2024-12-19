@@ -58,8 +58,8 @@ if (any(grepl("Particle_500um", folder_find$name))) {
 
 # Cleanup Data ----
 aux_sheets <- list.files(path = "data", pattern = ".xlsx", full.names = T)
-fiber_data <- readxl::read_xlsx(aux_sheets[grepl("LabGuruParticleCount", aux_sheets, ignore.case = T)], sheet = paste0(project_name, "_FIBER")) |> 
-  clean_names()
+# fiber_data <- readxl::read_xlsx(aux_sheets[grepl("LabGuruParticleCount", aux_sheets, ignore.case = T)], sheet = paste0(project_name, "_FIBER")) |> 
+#   clean_names()
 
 multiplier <- readxl::read_xlsx(aux_sheets[grepl("Multiplier", aux_sheets, ignore.case = T)], sheet = "Fragments_Fibers") |>
   clean_names()

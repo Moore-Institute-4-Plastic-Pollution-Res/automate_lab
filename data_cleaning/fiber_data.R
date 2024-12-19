@@ -1,33 +1,47 @@
 
 # Load in fiber data and merge 
-df <- fiber_data$sheet_names |> 
-  lapply(function(x) read.xlsx(fiber_data, sheet = x)) |> 
-  do.call(what=rbind)
+# df <- fiber_data$sheet_names |> 
+#   lapply(function(x) read.xlsx(fiber_data, sheet = x)) |> 
+#   do.call(what=rbind)
 
 # Data cleaning total
-fiber_df <- df |> 
-  mutate(
-    sample_id = 
-      str_replace(
-        Source, 
-        "^([^_]+_[^_]+)_(S|W)(\\d+)_.*", 
-        "\\1_\\2\\3"
-  )) |> 
-  filter(grepl(project_name, sample_id)) |> 
-# Variation of Fiber Polymer Type 
-  mutate(FiberPolymerType =
+fiber_df <- fiber_data |> 
+  #filter(grepl("JHENG", sample_id)) |> 
+  # Variation of Fiber Polymer Type 
+  mutate(polymer_id = tolower(polymer_id),
+         polymer_id = 
            case_when(
-             grepl("Cellulose", FiberPolymerType) ~ "Cellulose Derivative (Ether Cellulose)",
-             grepl("Organic", FiberPolymerType) ~ "Organic",
-             grepl("Polycrylon", FiberPolymerType) | grepl("Polyacry", FiberPolymerType) ~ 
-               "Polyacrylonitrile",
-             grepl("Polypro", FiberPolymerType) | grepl("polypro", FiberPolymerType)~ "Polypropylene",
-             grepl("Un", FiberPolymerType) | grepl("un", FiberPolymerType) ~ "Unknown",
-             grepl("polyester", FiberPolymerType) ~ "Polyester",
-             grepl("Polya", FiberPolymerType) ~ "Polyacrylonitrile",
-             TRUE ~ FiberPolymerType
+             grepl("cellulose", polymer_id, ignore.case = T) ~ "cellulose derivative (ether cellulose)",
+             grepl("organic", polymer_id, ignore.case = T) ~ "organic matter",
+             grepl("(polycrylon|polya)", polymer_id, ignore.case = T) ~ 
+               "polyacrylonitrile",
+             grepl("polypro", polymer_id, ignore.case = T) ~ "polypropylene",
+             grepl("un", polymer_id, ignore.case = T) ~ "unknown",
+             grepl("polyester|terephthalates", polymer_id, ignore.case = T) ~ "poly(esters/ethers/diglycidylethers/terephthalates)s",
+             TRUE ~ polymer_id
            )
-           )
+  ) |> 
+  # clean extra text in ID
+  mutate(sample_id = word(sample_id, 1)) |>
+  mutate(particle_color = case_when(
+    grepl("^(red)$", particle_color, ignore.case = T)  ~ "Red",
+    #white
+    grepl("^(Dk Blue|Blue)$", particle_color, ignore.case = T)  ~ "Blue",
+    #Blue
+    grepl("^(clear)$", particle_color, ignore.case = T) ~ "White",
+    # Black
+    grepl("^(yellow)$", particle_color, ignore.case = T) ~ "Orange",
+    TRUE ~ particle_color
+  ))
+
+#Check results
+unique(fiber_df$polymer_id)
+unique(fiber_df$particle_shape)
+unique(fiber_df$particle_color)
+
+write.csv(fiber_df,
+          "data/fiber_data_full_final.csv", 
+          row.names = F)
 
 # Total count of measured object in each sample
 fiber_total <- fiber_df |> 
