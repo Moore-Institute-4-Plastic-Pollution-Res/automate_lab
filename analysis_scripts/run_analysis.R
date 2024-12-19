@@ -81,11 +81,6 @@ particle_count <- read_sheet("https://docs.google.com/spreadsheets/d/1o3uoS5JW6J
 source("data_cleaning/data_merge.R")
 source("analysis_scripts/sample_analysis_plan.R")
 
-<<<<<<< HEAD
-# Generate report ----
-rmarkdown::render("MicroplasticsReport.Rmd", output_format = "all")
-=======
 rmarkdown::render(input = "MicroplasticsReport.Rmd", output_file = 
                     paste0(project_name,"_Report"),
                   output_format = "word_document")
->>>>>>> 24ff5af715d2471eaae25043df0102723d946a4a

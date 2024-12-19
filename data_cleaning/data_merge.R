@@ -2,7 +2,7 @@
 # Read in data
 source("data_cleaning/fragment_merge.R")
 #source("data_cleaning/fiber_data.R")
-source("data_cleaning/filter_500.R")
+#source("data_cleaning/filter_500.R")
 
 # Plastic count merge
 plastic_df <- rbind(individual_particle_count, filter_particle_count) 

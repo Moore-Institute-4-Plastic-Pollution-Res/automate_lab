@@ -194,16 +194,16 @@ write.csv(fragment_data1,
 # Remove matches less than 0.6
 fragment_data1 <- fragment_data1 |>
   filter(!(
-    material_class %in% c(
+    ParticlePolymerType %in% c(
       "mineral",
-      "organic matter"
+      "organic matter",
+      "unknown"
     )
   ), !is.na(ParticleShape)) |>
   # match_val > 0.6
   filter(match_val > 0.6)
 
-fragment_total <- fragment_data1 |>
-  filter(match_val > 0.6) |> 
+shape_count <- fragment_data1 |>
   group_by(SampleID, ParticleShape) |>
   summarize(count = n()) |>
   pivot_wider(names_from = ParticleShape, values_from = count) |>
@@ -215,44 +215,22 @@ fragment_total <- fragment_data1 |>
   select(-multiplier) |>
   mutate(total_count = rowSums(across(everything()), na.rm = TRUE))
 
-# count of plastics
-plastics_total <- fragment_data1 |>
-  filter(!(
-    material_class %in% c(
-      "mineral",
-      "organic matter"
-    )
-  ), !is.na(ParticleShape)) |>
+sample_count <- fragment_data1 |>
   group_by(SampleID) |>
   summarize(count_plastic = n()) |>
-  clean_names()
-
-
-# break down of plastics
-plastics_breakdown <- fragment_data1 |>
-  filter(!(
-    material_class %in% c(
-      "mineral",
-      "organic matter"
-    )
-  ), !is.na(ParticleShape)) |>
-  group_by(SampleID) |>
-  summarize(count_plastic = n()) |>
-  clean_names()
-
-fragment_particle_count <- left_join(plastics_total, plastics_breakdown) |>
   left_join(multiplier) |>
-  select(-proportions_of_sample) |>
+  #select(-proportions_of_sample) |>
   mutate(across(.cols = where(is.numeric) &
                   !all_of(c("subsample_ratio","multiplier")), ~ (.x /
                   subsample_ratio)/multiplier)
          ) |>
   select(-c(multiplier, subsample_ratio)) |>
   mutate(count_plastic = floor(count_plastic)) |> 
-  rename(SampleID = sample_id, "Particle Count" = count_plastic) 
+  rename(SampleID = sample_id, "Particle Count" = count_plastic) |>
+  clean_names()
 
 # Particle count by polymer
-fragment_breakdown <- fragment_data1 |>
+material_count <- fragment_data1 |>
   filter(!(
     material_class %in% c(
       "mineral",
