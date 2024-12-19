@@ -173,17 +173,26 @@ fragment_data1 <- fragment_data |>
   mutate(match_val = ifelse(grepl("^F", WellID), 0.66, match_val)) |>
   ungroup() |>
   mutate(across(where(is.list), ~ purrr::map_chr(., toString))) |> # Converts lists to strings
-  select(SampleID, WellID, ParticleShape, ParticleColor, ParticlePolymerType, ParticleLength, ParticleWidth, SieveSizeRange, Notes, library_id, match_val)
+  select(SampleID, WellID, ParticleShape, ParticleColor, 
+         ParticlePolymerType, ParticleLength, ParticleWidth,
+         SieveSizeRange, Notes, library_id, match_val) |>
+  clean_names() |>
+  rename(particle_id = well_id,
+         max_cor_val = match_val, 
+         max_cor_name = library_id, 
+         max_length_um = particle_length, 
+         min_length_um = particle_width, 
+         material_class = particle_polymer_type)
+
 
 # Manual check colors and shape
 #Should add a test to the main code for this to double check things. 
-unique(fragment_data1$ParticleShape)
-unique(fragment_data1$ParticleColor)
-table(fragment_data1$ParticlePolymerType)
+unique(fragment_data1$particle_shape)
+unique(fragment_data1$particle_color)
 
-write.csv(fragment_data1,
-          "data/individual_data_full_final.csv", 
-          row.names = F)
+# write.csv(fragment_data1,
+#           "data/individual_data_full_final.csv", 
+#           row.names = F)
 
 
 # ----------------------------- Multiplier ------------------------------------
@@ -191,62 +200,62 @@ write.csv(fragment_data1,
 # By each sample estimate of total particles found
 # total of each type with the multiplier
 # Should we do this now or once at end?
-# Remove matches less than 0.6
-fragment_data1 <- fragment_data1 |>
-  filter(!(
-    ParticlePolymerType %in% c(
-      "mineral",
-      "organic matter",
-      "unknown"
-    )
-  ), !is.na(ParticleShape)) |>
-  # match_val > 0.6
-  filter(match_val > 0.6)
-
-shape_count <- fragment_data1 |>
-  group_by(SampleID, ParticleShape) |>
-  summarize(count = n()) |>
-  pivot_wider(names_from = ParticleShape, values_from = count) |>
-  clean_names() |>
-  left_join(multiplier) |>
-  #select(-proportions_of_sample) |>
-  mutate(across(.cols = where(is.numeric) & !all_of(c("subsample_ratio","multiplier")), ~ (.x /
-                  subsample_ratio)/multiplier)) |>
-  select(-multiplier) |>
-  mutate(total_count = rowSums(across(everything()), na.rm = TRUE))
-
-sample_count <- fragment_data1 |>
-  group_by(SampleID) |>
-  summarize(count_plastic = n()) |>
-  left_join(multiplier) |>
-  #select(-proportions_of_sample) |>
-  mutate(across(.cols = where(is.numeric) &
-                  !all_of(c("subsample_ratio","multiplier")), ~ (.x /
-                  subsample_ratio)/multiplier)
-         ) |>
-  select(-c(multiplier, subsample_ratio)) |>
-  mutate(count_plastic = floor(count_plastic)) |> 
-  rename(SampleID = sample_id, "Particle Count" = count_plastic) |>
-  clean_names()
-
-# Particle count by polymer
-material_count <- fragment_data1 |>
-  filter(!(
-    material_class %in% c(
-      "mineral",
-      "organic matter"
-    )
-  ), !is.na(ParticleShape)) |>
-  group_by(SampleID, material_class) |>
-  summarize(count = n()) |>
-  left_join(multiplier, by = c("SampleID" = "sample_id")) |>
-  mutate(across(
-    .cols = where(is.numeric) &
-      !all_of(c("subsample_ratio", "multiplier")),
-    ~ (.x/subsample_ratio) / multiplier
-  )
-  ) |>
-  select(-c(multiplier, proportions_of_sample)) |>
-  group_by(material_class) |>
-  summarize(count = sum(count)) |> 
-  mutate(count = floor(count))
+# # Remove matches less than 0.6
+# fragment_data1 <- fragment_data1 |>
+#   filter(!(
+#     ParticlePolymerType %in% c(
+#       "mineral",
+#       "organic matter",
+#       "unknown"
+#     )
+#   ), !is.na(ParticleShape)) |>
+#   # match_val > 0.6
+#   filter(match_val > 0.6)
+# 
+# shape_count <- fragment_data1 |>
+#   group_by(SampleID, ParticleShape) |>
+#   summarize(count = n()) |>
+#   pivot_wider(names_from = ParticleShape, values_from = count) |>
+#   clean_names() |>
+#   left_join(multiplier) |>
+#   #select(-proportions_of_sample) |>
+#   mutate(across(.cols = where(is.numeric) & !all_of(c("subsample_ratio","multiplier")), ~ (.x /
+#                   subsample_ratio)/multiplier)) |>
+#   select(-multiplier) |>
+#   mutate(total_count = rowSums(across(everything()), na.rm = TRUE))
+# 
+# sample_count <- fragment_data1 |>
+#   group_by(SampleID) |>
+#   summarize(count_plastic = n()) |>
+#   left_join(multiplier) |>
+#   #select(-proportions_of_sample) |>
+#   mutate(across(.cols = where(is.numeric) &
+#                   !all_of(c("subsample_ratio","multiplier")), ~ (.x /
+#                   subsample_ratio)/multiplier)
+#          ) |>
+#   select(-c(multiplier, subsample_ratio)) |>
+#   mutate(count_plastic = floor(count_plastic)) |> 
+#   rename(SampleID = sample_id, "Particle Count" = count_plastic) |>
+#   clean_names()
+# 
+# # Particle count by polymer
+# material_count <- fragment_data1 |>
+#   filter(!(
+#     material_class %in% c(
+#       "mineral",
+#       "organic matter"
+#     )
+#   ), !is.na(ParticleShape)) |>
+#   group_by(SampleID, material_class) |>
+#   summarize(count = n()) |>
+#   left_join(multiplier, by = c("SampleID" = "sample_id")) |>
+#   mutate(across(
+#     .cols = where(is.numeric) &
+#       !all_of(c("subsample_ratio", "multiplier")),
+#     ~ (.x/subsample_ratio) / multiplier
+#   )
+#   ) |>
+#   select(-c(multiplier, proportions_of_sample)) |>
+#   group_by(material_class) |>
+#   summarize(count = sum(count)) |> 
+#   mutate(count = floor(count))
