@@ -56,7 +56,7 @@ aux_sheets <- list.files(path = "data", pattern = ".xlsx", full.names = T)
 multiplier <- readxl::read_xlsx(aux_sheets[grepl("Multiplier", aux_sheets, ignore.case = T)], sheet = "Fragments_Fibers") |>
   clean_names()
 
-filter_data <- read_csv("data/filter_500_full_data.csv") #Not currently the correct one. 
+filter_data <- read_csv("data/JHENG_filter_particle_details_all.csv") #Not currently the correct one. 
 multiplier2 <- readxl::read_xlsx(aux_sheets[grepl("Multiplier", aux_sheets, ignore.case = T)], sheet = "Filter") |>
   clean_names() |> 
   mutate(sample_id = str_replace_all(sample_id, "O", "0"))
