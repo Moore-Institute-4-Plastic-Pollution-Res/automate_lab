@@ -89,3 +89,14 @@ source("analysis_scripts/sample_analysis_plan.R")
 rmarkdown::render(input = "MicroplasticsReport.Rmd", output_file = 
                     paste0(project_name,"_Report"),
                   output_format = "word_document")
+
+data_upload <- list.files(wd)
+
+for (file in data_upload){
+  
+  drive_upload(media = file.path(wd, file),
+               path = as_id(as.character(new_folder$id))
+  )
+  
+}
+
