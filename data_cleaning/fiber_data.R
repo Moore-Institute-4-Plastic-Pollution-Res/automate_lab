@@ -32,7 +32,7 @@ fiber_df <- fiber_data |>
     # Black
     grepl("^(yellow)$", particle_color, ignore.case = T) ~ "Orange",
     TRUE ~ particle_color
-  ))
+  )) 
 
 #Check results
 unique(fiber_df$polymer_id)
