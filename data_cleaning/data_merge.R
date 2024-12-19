@@ -27,7 +27,7 @@ polymer_count <-
   na.omit()
 
 # Set MIPPR sample ID to actual project ID
-sampleid <- readxl::read_xlsx("data/LabGuruSampleWorksheet.xlsx", sheet = 2) |>
+sampleid <- readxl::read_xlsx(file.path(lab_guru$local_path), sheet = "Sample Name and Subsamples") |>
   clean_names() |> 
   filter(!is.na(mippr_sample_id)) |> 
   select(1,2) |> 
@@ -38,7 +38,6 @@ plastic_count <- left_join(sampleid, plastic_count, by = c("mippr_sample_id" = "
   select(-mippr_sample_id) |> 
   drop_na() |> 
   arrange(desc(`Particle Count`))
-  
 
 # clean environment
 # vars_keep <- c("plastic_count", "polymer_count", "MIPPR_breakdown", "filter_data", "project_name", "local_store_results")

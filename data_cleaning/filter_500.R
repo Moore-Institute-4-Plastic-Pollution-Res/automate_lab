@@ -3,7 +3,7 @@ library(readxl)
 library(stringr)
 
 filter_data <- read_csv(file.path(local_store_results,"particle_details_all.csv"))
-multiplier <- readxl::read_xlsx("data_cleaning/data/Multiplier.xlsx", sheet = "Filter") |>
+multiplier <- readxl::read_xlsx(file.path(multiplier_data$local_path), sheet = "Filter") |>
   clean_names() |> 
   mutate(
     sample_id = str_replace_all(sample_id, "O", "0"))

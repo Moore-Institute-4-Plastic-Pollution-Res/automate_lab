@@ -3,12 +3,11 @@ library(magrittr)
 library(janitor)
 library(readxl)
 
-# Read in data
-particle_count <- read.csv(
-  "data_cleaning/data/ParticleCount - Fragment Data.csv",
+particle_count <- read.csv(file.path(particle_count_data$local_path),
   na.strings = c("", "NA")
 )
-full_particle <- read.csv("data_cleaning/data/full_particle_results.csv")
+
+full_particle <- read.csv(file.path(local_store_results_fragment, "full_particle_results.csv"))
 
 #--------------Merging Particle Count and Fragment Analysis Results--------------
 # Particle Count ----
@@ -229,7 +228,7 @@ unique(fragment_data1$ParticleShape)
 
 
 # ----------------------------- Multiplier ------------------------------------
-multiplier <- readxl::read_xlsx("data_cleaning/data/Multiplier.xlsx", sheet = "Fragments_Fibers") |>
+multiplier <- readxl::read_xlsx(file.path(multiplier$local_path), sheet = "Fragments_Fibers") |>
   clean_names()
 
 

@@ -4,9 +4,9 @@ library(openxlsx)
 library(janitor)
 
 # Read and merge spreadsheets
-fiber_data <- loadWorkbook("data_cleaning/data/FIBER_Meas.xlsx")
+fiber_data <- loadWorkbook(file.path(fiber_count_data$local_path))
 
-multiplier <- readxl::read_xlsx("data_cleaning/data/Multiplier.xlsx", sheet = "Fragments_Fibers") |>
+multiplier <- readxl::read_xlsx(file.path(multiplier_data$local_path), sheet = "Fragments_Fibers") |>
   clean_names()
 
 # Load in fiber data and merge 

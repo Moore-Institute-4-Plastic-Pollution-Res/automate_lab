@@ -31,23 +31,21 @@ data_search <- shared_drive_find("Project") |>
 # Found the correct folder path - now create a function that conducts the analysis for each folder that starts with SFEI
 
 # 
-data_search <- drive_ls(as_id("1sich54gPbxQW01R_IdMJXSM5Eo7NlCW9"))
-
 #Set a folder to save data locally
-local_store <- file.path("data",project_name)
-local_store_raw <- file.path("data", project_name, "Raw_SPA", fsep = "/")
-local_store_results <- file.path("data", project_name, "Results_SPA", fsep = "/")
+local_store_fragment <- file.path("data",project_name)
+local_store_raw_fragment <- file.path("data", project_name, "Raw_SPA", fsep = "/")
+local_store_results_fragment <- file.path("data", project_name, "Results_SPA", fsep = "/")
 
 # Create folders ----
 
-if(!dir.exists(local_store)){
-  dir.create(local_store, recursive = TRUE)
+if(!dir.exists(local_store_fragment)){
+  dir.create(local_store_fragment, recursive = TRUE)
 }
-if(!dir.exists(local_store_raw)){
-  dir.create(local_store_raw, recursive = TRUE)
+if(!dir.exists(local_store_raw_fragment)){
+  dir.create(local_store_raw_fragment, recursive = TRUE)
 }
-if(!dir.exists(local_store_results)){
-  dir.create(local_store_results, recursive = TRUE)
+if(!dir.exists(local_store_results_fragment)){
+  dir.create(local_store_results_fragment, recursive = TRUE)
 }
 
 #Remove files already downloaded
