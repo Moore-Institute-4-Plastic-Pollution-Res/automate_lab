@@ -118,29 +118,21 @@ volume_added <-labguru_df |>
 # Procedural Blank
 # MIPPR Procedual blanks
 # plastic_summary_all for this
-mippr_pb <- MIPPR_breakdown |> 
-  filter(str_detect(sample_name, "_PB_")) |> 
+mippr_pb <- confident_plastic |> 
+  filter(str_detect(sample_name, "PB")) |> 
   group_by(material_class) |> 
   summarize(count = sum(count)) |> 
   mutate(percent = (round(count/sum(count) * 100, 1))) |> 
   arrange(desc(percent))
 
-#LFB read in fragment data for PA66 - red beads
-pa66_data <- read.csv("data_cleaning/data/ParticleCount - Fragment Data.csv") |> 
-  filter(grepl("LFB", SampleID)) |> 
-  group_by(SampleID) |> 
-  summarize(pa66 = n()) |> 
-  pull(pa66)
-
-
 # LFB table prep - assuming one LFB present
-mippr_lfb_name <- MIPPR_breakdown |> 
-  filter(str_detect(sample_name, "LFB")) |> 
-  distinct(sample_name) |> 
-  pull(sample_name)
+mippr_lfb_name <- confident_plastic |> 
+  filter(str_detect(sample_id, "LFB")) |> 
+  distinct(sample_id) |> 
+  pull(sample_id)
   
-mippr_lfb <- MIPPR_breakdown |>
-  filter(str_detect(sample_name, "LFB")) |> 
+mippr_lfb <- confident_plastic |>
+  filter(str_detect(sample_id, "LFB")) |> 
   group_by(material_class) |>
   summarize(count = sum(count)) |> 
   mutate(type_of_plastic = 
@@ -169,11 +161,7 @@ lfb <- read_csv("data_cleaning/data/LFB_Counts.csv") |>
 lfb_df <- left_join(lfb, mippr_lfb) |>
   mutate(
     across(everything(), ~replace(., is.na(.), 0)),
-    percent = round((post_count / pre_count) * 100, 1),
-    post_count =
-      ifelse(type_of_plastic == "PA66", pa66_data, post_count),
-    percent = round((post_count / pre_count) * 100, 1)
-  )
+    percent = round((post_count / pre_count) * 100, 1))
 
   
   
@@ -218,9 +206,10 @@ if (length(recover_na) > 1){
 }
 
 # Notes
-notes <- read.csv("data_cleaning/final/fragment_data_full_final.csv") |>
-  filter(!is.na(Notes)) |>
-  select(ParticleID, Notes) |>
-  mutate(text = paste(ParticleID, Notes)) |>
+notes <- all_data |>
+  filter(!is.na(notes) & notes != "") |>
+  select(sample_id, notes, particle_id) |>
+  distinct() |>
+  mutate(text = paste(sample_id, particle_id, notes)) |>
   pull(text) |>
   paste(collapse = " and ")

@@ -50,13 +50,15 @@ if (any(grepl("Particle_500um", folder_find$name))) {
 
 # Cleanup Data ----
 aux_sheets <- list.files(path = "data", pattern = ".xlsx", full.names = T)
+aux_csv <- list.files(path = "data", pattern = ".csv", full.names = T)
+
 # fiber_data <- readxl::read_xlsx(aux_sheets[grepl("LabGuruParticleCount", aux_sheets, ignore.case = T)], sheet = paste0(project_name, "_FIBER")) |> 
 #   clean_names()
 
 multiplier <- readxl::read_xlsx(aux_sheets[grepl("Multiplier", aux_sheets, ignore.case = T)], sheet = "Fragments_Fibers") |>
   clean_names()
 
-filter_data <- read_csv("data/JHENG_filter_particle_details_all.csv") #Not currently the correct one. 
+filter_data <- read_csv(aux_csv[grepl("particle_details_all", aux_csv, ignore.case = T)]) #Not currently the correct one. 
 multiplier2 <- readxl::read_xlsx(aux_sheets[grepl("Multiplier", aux_sheets, ignore.case = T)], sheet = "Filter") |>
   clean_names() |> 
   mutate(sample_id = str_replace_all(sample_id, "O", "0"))
@@ -77,6 +79,9 @@ full_particle <- read.csv(list.files("data", "full_particle_results.csv", full.n
 
 particle_count <- read_sheet("https://docs.google.com/spreadsheets/d/1o3uoS5JW6JDxa4UGNht3v5fVNtlY9z8s4T1z8c1kmwQ/edit?usp=sharing",
                              sheet = project_name)
+
+##Hardcoding fixes optional before analysis
+source("data/special_cleanup.R")
 
 source("data_cleaning/data_merge.R")
 source("analysis_scripts/sample_analysis_plan.R")
