@@ -52,13 +52,13 @@ material_plastic <- confident_plastic |>
 
 # Merge polymer count data for fragment, fiber, and filter ----
 # Read in data
-polymer_count <- rbind(individual_breakdown, filter_breakdown) |> 
-  group_by(material_class) |> 
-  summarize(count = sum(count)) |> 
-  mutate(percent = round((count/(sum(count, na.rm = TRUE)) * 100),1)
-         ) |> 
-  arrange(desc(percent)) |> 
-  na.omit()
+# polymer_count <- rbind(individual_breakdown, filter_breakdown) |> 
+#   group_by(material_class) |> 
+#   summarize(count = sum(count)) |> 
+#   mutate(percent = round((count/(sum(count, na.rm = TRUE)) * 100),1)
+#          ) |> 
+#   arrange(desc(percent)) |> 
+#   na.omit()
 
 # clean environment
 # vars_keep <- c("plastic_count", "polymer_count", "MIPPR_breakdown", "filter_data", "project_name", "local_store_results")
