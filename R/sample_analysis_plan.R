@@ -158,15 +158,13 @@ lfb_df <- left_join(lfb, mippr_lfb) |>
     across(everything(), ~replace(., is.na(.), 0)),
     percent = round((post_count / pre_count) * 100, 1))
 
-  
-  
 # spike recovery
 pa66 <- lfb_df |> 
-  filter(type_of_plastic == "PA66") |> 
+  filter(type_of_plastic == "Polyamides") |> 
   pull(percent)
 
 cellu <- lfb_df |> 
-  filter(type_of_plastic == "Cellulose Acetate") |> 
+  filter(type_of_plastic == "Cellulose Derivatives (Ether Cellulose)") |> 
   pull(percent)
 
 poly <- lfb_df |> 

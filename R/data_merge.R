@@ -141,7 +141,7 @@ fragment_data1 <- fragment_data |>
            case_when(
              grepl("cellulose", ParticlePolymerType, ignore.case = T) ~ "cellulose derivative (ether cellulose)",
              grepl("organic", ParticlePolymerType, ignore.case = T) ~ "organic matter",
-             grepl("(polycrylon|polya)", ParticlePolymerType, ignore.case = T) ~ 
+             grepl("(polycrylon)", ParticlePolymerType, ignore.case = T) ~ 
                "polyacrylonitrile",
              grepl("polypro", ParticlePolymerType, ignore.case = T) ~ "polypropylene",
              grepl("un", ParticlePolymerType, ignore.case = T) ~ "unknown",
@@ -219,7 +219,7 @@ material_plastic <- confident_plastic_nocontrol |>
   summarise(count = round(sum(count), 0)) |>
   ungroup()
 
-sum(material_plastic$count) == sum(sample_plastic$`Particle Count`)
+print(sum(material_plastic$count) == sum(sample_plastic$`Particle Count`))
 # clean environment
 # vars_keep <- c("plastic_count", "polymer_count", "MIPPR_breakdown", "filter_data", "project_name", "local_store_results")
 # rm(list = setdiff(ls(), vars_keep))
