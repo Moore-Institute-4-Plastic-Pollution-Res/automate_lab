@@ -44,7 +44,6 @@ The FTIR spectral results were analyzed using OpenSpecy software, version `r pac
 ## MIPPR Quality Assurance/Quality Control Samples
 With each batch of samples, the MIPPR laboratory prepared a procedural blank and a laboratory-fortified blank, spiked with a known number of particles of particular plastic and size classes. The procedural blank indicates the level of contamination that could come from the laboratory procedure. The identification of and percent recovery of particles in the laboratory fortified blank provide information as to the accuracy of the method. The results of the MIPPR QA/QC samples are presented in Tables 3A-B.
 
-<<<<<<< HEAD
 ## Data Summary
 
 Here, we summarize the number of particles per sample, the polymer types, and size characteristics. The data set includes a .csv file for particle measurements (particle_details_all) and a file of spectra wavelength measurements for the particle polymers (particle_spec_all.rds).
@@ -62,7 +61,7 @@ set_flextable_defaults(
   padding.top = 3, padding.bottom = 3,
   padding.left = 4, padding.right = 4)
 
-ft <- flextable(plastic_count) |>
+ft <- flextable(sample_plastic |> arrange(desc(count))) |>
   set_caption(caption = "Table 1. Plastic particles count by sample name", 
               autonum = run_autonum(seq_id = "tab", bkm = "table6")) |>  
   set_header_labels(sample_name = "Sample", count = "Particle Count") |>
@@ -81,7 +80,7 @@ ft
 
 
 ```{r table2, echo=FALSE}
-ft2 <- flextable(polymer_count) |>
+ft2 <- flextable(material_plastic |> arrange(desc(count))) |>
   set_caption(caption = "Table 2. Types of polymers detected, particle count by polymer type, and percent of total polymers by each polymer type for all samples analyzed by FTIR.",
                             autonum = run_autonum(seq_id = "tab", bkm = "tables6")
               ) |>
@@ -169,10 +168,7 @@ knitr::include_graphics("www/SMooreSig2.png", error = FALSE)
 
 ```
 
-```
-
-
-*Shelly Moore**
+*Shelly Moore*
 
 **Executive Director – Moore Institute for Plastic Pollution Research**
 

@@ -88,7 +88,7 @@ source("R/data_merge.R")
 #Extract control data and report metadata
 source("R/sample_analysis_plan.R")
 
-rmarkdown::render(input = "MicroplasticsReport.Rmd", output_file = 
+rmarkdown::render(input = "R/MicroplasticsReport.Rmd", output_file = 
                     paste0(project_name,"_Report"),
                   output_format = "word_document")
 
@@ -103,7 +103,9 @@ new_folder <- drive_mkdir("RCode",
                           overwrite = TRUE
 )
 
-data_upload <- list.files(path = "R/", pattern = ".R", full.names = T)
+data_upload <- list.files(path = "R/", 
+                          pattern = ".R", 
+                          full.names = T)
 
 for(file in data_upload){
   drive_upload(media = file.path(file),

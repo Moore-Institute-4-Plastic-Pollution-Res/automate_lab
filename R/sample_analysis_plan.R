@@ -62,28 +62,33 @@ density <- labguru_df |>
   distinct() |> 
   drop_na()
 
+if(nrow(density) == 0){
+  density <- ""
+}
 # dependent on the chemical - assuming we always use CaCl2
-if (density$density_separation_composition == "CaCl2") {
-  density <- density |>
-    mutate(
-      value = paste0(
-        density_separation_density,
-        " g/ml density solution of calcium chloride (",
-        density_separation_composition,
-        ")"
-      )
-    ) |> 
-    pull(value)
-} else {
-  density <- density |>
-    mutate(
-      value = paste0(
-        density_separation_density,
-        " g/ml density solution of ",
-        density_separation_composition
-      )
-    ) |> 
-    pull(value)
+if (nrow(density)!= 0) {
+  if (density$density_separation_composition == "CaCl2") {
+    density <- density |>
+      mutate(
+        value = paste0(
+          density_separation_density,
+          " g/ml density solution of calcium chloride (",
+          density_separation_composition,
+          ")"
+        )
+      ) |> 
+      pull(value)
+  } else {
+    density <- density |>
+      mutate(
+        value = paste0(
+          density_separation_density,
+          " g/ml density solution of ",
+          density_separation_composition
+        )
+      ) |> 
+      pull(value)
+  }
 }
 
 # filter 
@@ -99,7 +104,7 @@ filter <- labguru_df |>
   pull(value)
 
 # added volume for sieving
-volume_added <-labguru_df |> 
+volume_added <- labguru_df |> 
   select(sample_id, volume_solution_added) |> 
   filter(!str_detect(sample_id, "MIPPR")) |> 
   distinct(volume_solution_added) |> 
