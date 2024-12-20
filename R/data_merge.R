@@ -189,7 +189,7 @@ all_data <- bind_rows(filter_data |>
   mutate(count = ifelse(is_empty_or_na(area_um2), count / multiplier.x ,  count / multiplier.y))  
 
 #Major client output
-fwrite(all_data, "full_particle_data.csv")
+fwrite(all_data, "data/full_particle_data.csv")
 
 #cleanup and analysis. 
 confident_plastic <- all_data |>
@@ -211,13 +211,16 @@ confident_plastic_nocontrol <- confident_plastic |>
 sample_plastic <- confident_plastic_nocontrol |>
   group_by(sample_name) |> 
   summarise(count = round(sum(count), 0)) |>
-  ungroup()    
+  ungroup()    |>
+  arrange(desc(count))
 
 #assuming that the large and small particle multipliers have different IDs here. 
 material_plastic <- confident_plastic_nocontrol |>
   group_by(material_class) |> 
   summarise(count = round(sum(count), 0)) |>
-  ungroup()
+  ungroup() |>
+  mutate(percent = round(count/sum(count) * 100,1)) |>
+  arrange(desc(count))
 
 print(sum(material_plastic$count) == sum(sample_plastic$`Particle Count`))
 # clean environment

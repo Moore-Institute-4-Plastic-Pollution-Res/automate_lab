@@ -64,7 +64,7 @@ multiplier2 <- readxl::read_xlsx(aux_sheets[grepl("Multiplier", aux_sheets, igno
 
 # Set MIPPR sample ID to actual project ID
 # Data
-labguru_df <- read_xlsx(aux_sheets[grepl("LabGuruSampleWorksheet", aux_sheets, ignore.case = T)], sheet = 1) |> 
+labguru_df <- readxl::read_xlsx(aux_sheets[grepl("LabGuruSampleWorksheet", aux_sheets, ignore.case = T)], sheet = 1) |> 
   clean_names()
 
 #Ideally not necessary
@@ -103,9 +103,10 @@ new_folder <- drive_mkdir("RCode",
                           overwrite = TRUE
 )
 
-data_upload <- list.files(path = "R/", 
+data_upload <- c(list.files(path = "R/", 
                           pattern = ".R", 
-                          full.names = T)
+                          full.names = T), 
+                 "data/full_particle_data.csv")
 
 for(file in data_upload){
   drive_upload(media = file.path(file),

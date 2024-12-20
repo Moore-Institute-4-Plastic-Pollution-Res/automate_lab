@@ -33,14 +33,15 @@ digestion <- labguru_df |>
   distinct() |> 
   drop_na() 
 
-# digestion concentration multiple option
 if (length(digestion$digestion_concentration) > 2) {
   max <- max(digestion$digestion_concentration)
   min <- min(digestion$digestion_concentration)
   solution <- unique(digestion$digestion_solution_composition)
-  digestion <- paste0(min * 100, "% to ", max * 100, "% ", solution)
-} else{
-  digestion <- paste0(
+  digestion <- paste0("digested in ", min * 100, "% to ", max * 100, "% ", solution)
+} else if(is.na(digestion)){
+    digestion <- "not digested "
+  } else{
+  digestion <- paste0("digested in ",
     digestion$digestion_concentration * 100,
     "% ",
     digestion$digestion_solution_composition
@@ -62,9 +63,6 @@ density <- labguru_df |>
   distinct() |> 
   drop_na()
 
-if(nrow(density) == 0){
-  density <- ""
-}
 # dependent on the chemical - assuming we always use CaCl2
 if (nrow(density)!= 0) {
   if (density$density_separation_composition == "CaCl2") {
@@ -89,6 +87,8 @@ if (nrow(density)!= 0) {
       ) |> 
       pull(value)
   }
+} else {
+    density <- "not density separated"
 }
 
 # filter 
@@ -104,19 +104,24 @@ filter <- labguru_df |>
   pull(value)
 
 # added volume for sieving
-volume_added <- labguru_df |> 
-  select(sample_id, volume_solution_added) |> 
-  filter(!str_detect(sample_id, "MIPPR")) |> 
-  distinct(volume_solution_added) |> 
-  separate(
-    volume_solution_added,
-    into = c("a", "b","c","d", "e", "f", "g"),
-    sep = " "
-  ) |> 
-  mutate(
-    value = paste(a, b, "of", c, "and", e, f, "of", g)
-  ) |> 
-  pull(value)
+if(is.na(unique(labguru_df$volume_solution_added))){
+  volume_added = "alcojet"
+} else{
+  volume_added <- labguru_df |> 
+    select(sample_id, volume_solution_added) |> 
+    filter(!str_detect(sample_id, "MIPPR")) |> 
+    distinct(volume_solution_added) |> 
+    separate(
+      volume_solution_added,
+      into = c("a", "b","c","d", "e", "f", "g"),
+      sep = " "
+    ) |> 
+    mutate(
+      value = paste(a, b, "of", c, "and", e, f, "of", g)
+    ) |> 
+    pull(value)  
+}
+
 
 ## ------------------------- QA/QC --------------------------
 

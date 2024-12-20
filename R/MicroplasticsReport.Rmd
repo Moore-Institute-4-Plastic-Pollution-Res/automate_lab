@@ -25,10 +25,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Received Date	*****
 
 ## Methodology
-The Moore Institute for Plastic Pollution Research (MIPPR) uses FTIR for the determination of microplastics greater than 50 µm in size in source water as required by the California State Water Board’s Method for Microplastics Analysis in Drinking Water (State Water Resources Control Board, 2022 and MIPPR, 2024). However, this report includes microplastics greater than 50 µm as the software analysis method developed by MIPPR can identify microplastics at 50 µm based on FTIR pixel size. The process is based on peer-reviewed literature and the results and recommendations from an international microplastic method evaluation study (De Frond et al., 2022). 
+The Moore Institute for Plastic Pollution Research (MIPPR) uses FTIR for the determination of microplastics greater than 50 µm in size in source water as required by the California State Water Board’s Method for Microplastics Analysis in Drinking Water (State Water Resources Control Board, 2022 and MIPPR, 2024). The process is based on peer-reviewed literature and the results and recommendations from an international microplastic method evaluation study (De Frond et al., 2022). 
 
 ## Sample Preparation
-Samples were transferred into a 1-liter sample jar, and `r volume_added` were added. The samples were stirred with a metal spoon, shaken, then allowed to sit. The samples were wet sieved through a stack of sieves: 500 µm, 212 µm, and 20 µm. The collected material from each sieve was rinsed and collected into discrete sample jars containing the derived samples, except for sample MBC-BODY-50-100 MM, which was spilled during sieving. The 500 µm derived samples were handpicked for microplastics using a stereoscope. The suspected particles were analyzed with FTIR. The 212 µm and 20 µm derived samples were digested in `r digestion` (H~2~O~2~), then sieved and density separated in a `r density` (CaCl~2~). The sample was then filtered onto one or more `r filter` FTIR analysis. If the sample contained too much sediment, an aliquot was taken, and the volume of aliquot to sample was recorded. 
+Samples were transferred into a 1-liter sample jar, and `r volume_added` were added. The samples were stirred with a metal spoon, shaken, then allowed to sit. The samples were wet sieved through a stack of sieves: 500 µm, 212 µm, and 20 µm. The collected material from each sieve was rinsed and collected into discrete sample jars containing the derived samples. The 500 µm derived samples were handpicked for microplastics using a stereoscope. The suspected particles were analyzed with FTIR. The 212 µm and 20 µm derived samples were `r digestion` and `r density`. The sample was then filtered onto one or more `r filter` FTIR analysis. If the sample contained too much material, an aliquot was taken, and the volume of aliquot to sample was recorded. 
 Please see the Notes and Recommendations section for descriptions and definitions of the sample nomenclature.
 
 ## Sample Analysis - FTIR
@@ -46,9 +46,9 @@ With each batch of samples, the MIPPR laboratory prepared a procedural blank and
 
 ## Data Summary
 
-Here, we summarize the number of particles per sample, the polymer types, and size characteristics. The data set includes a .csv file for particle measurements (particle_details_all) and a file of spectra wavelength measurements for the particle polymers (particle_spec_all.rds).
+Here, we summarize the number of particles per sample, the polymer types, and size characteristics. The data set includes a .csv file for particle measurements (particle_details_all) and a file of spectra for the particles (particle_spec_all.rds).
 
-The plastic particle counts for all samples are summarized below in Table 1. The particle counts in the samples ranged from `r min(plastic_count[["Particle Count"]])` to `r format(max(plastic_count[["Particle Count"]]), big.mark = ",")` particles. Table 2 presents the types of polymers detected, particle count by polymer type, and percent of total polymers by each polymer type for all samples. `r str_to_title(as.character(english(nrow(polymer_count))))` polymer types were detected, the most common were `r polymer_count[1,1] |> pull()`, at `r polymer_count[1,3]` percent of the total number of polymers detected, and `r polymer_count[2,1] |> pull()`, which accounted for `r polymer_count[2,3] |> pull()` percent of the total number of polymers detected. 
+The plastic particle counts for all samples are summarized below in Table 1. The particle counts in the samples ranged from `r min(sample_plastic[["count"]])` to `r format(max(sample_plastic[["count"]]), big.mark = ",")` particles. Table 2 presents the types of polymers detected, particle count by polymer type, and percent of total polymers by each polymer type for all samples. `r str_to_title(as.character(english(nrow(material_plastic))))` polymer types were detected, the most common were `r material_plastic[1,1] |> pull()`, at `r material_plastic[1,3]` percent of the total number of polymers detected, and `r material_plastic[2,1] |> pull()`, which accounted for `r material_plastic[2,3] |> pull()` percent of the total number of polymers detected. 
 
 ```{r table1, echo=FALSE}
 big_border = fp_border(color="black", width = 2)
@@ -61,7 +61,7 @@ set_flextable_defaults(
   padding.top = 3, padding.bottom = 3,
   padding.left = 4, padding.right = 4)
 
-ft <- flextable(sample_plastic |> arrange(desc(count))) |>
+ft <- flextable(sample_plastic) |>
   set_caption(caption = "Table 1. Plastic particles count by sample name", 
               autonum = run_autonum(seq_id = "tab", bkm = "table6")) |>  
   set_header_labels(sample_name = "Sample", count = "Particle Count") |>
@@ -80,7 +80,7 @@ ft
 
 
 ```{r table2, echo=FALSE}
-ft2 <- flextable(material_plastic |> arrange(desc(count))) |>
+ft2 <- flextable(material_plastic) |>
   set_caption(caption = "Table 2. Types of polymers detected, particle count by polymer type, and percent of total polymers by each polymer type for all samples analyzed by FTIR.",
                             autonum = run_autonum(seq_id = "tab", bkm = "tables6")
               ) |>
